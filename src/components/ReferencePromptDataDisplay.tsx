@@ -45,6 +45,9 @@ export function ReferencePromptDataDisplay({ data, isLoading, disabled, brand, o
   // 0 = very predictable, 1 = default balanced, 2 = very creative/random.
   const [temperature, setTemperature] = useState(1.0);
 
+  // Per-field instruction text — user types what they want GPT to focus on when regenerating that field
+  const [fieldInstructions, setFieldInstructions] = useState<Partial<Record<RegenerableField, string>>>({});
+
   // Regenerate a single field (called by the icon button next to the label)
   const handleRegenerate = async (field: RegenerableField) => {
     if (!data || !onChange) return;
@@ -59,6 +62,7 @@ export function ReferencePromptDataDisplay({ data, isLoading, disabled, brand, o
           field,
           brand,
           temperature,
+          instruction:     fieldInstructions[field] || '',
           format_layout:   data.format_layout,
           primary_object:  data.primary_object,
           subject:         data.subject,
@@ -249,7 +253,6 @@ export function ReferencePromptDataDisplay({ data, isLoading, disabled, brand, o
                       <Label className="text-xs font-medium text-muted-foreground">
                         {FIELD_LABELS[key] || key}
                       </Label>
-                      {/* Small icon button — only on Subject and Background */}
                       {isRegenerableField && onChange && (
                         <button
                           type="button"
@@ -265,6 +268,17 @@ export function ReferencePromptDataDisplay({ data, isLoading, disabled, brand, o
                         </button>
                       )}
                     </div>
+                    {/* Optional instruction input — only for regeneratable fields */}
+                    {isRegenerableField && onChange && (
+                      <input
+                        type="text"
+                        value={fieldInstructions[key as RegenerableField] || ''}
+                        onChange={(e) => setFieldInstructions(prev => ({ ...prev, [key]: e.target.value }))}
+                        placeholder={`Instruction (optional) — e.g. describe what you want for ${FIELD_LABELS[key].toLowerCase()}`}
+                        disabled={!!disabled || anyBusy}
+                        className="w-full text-xs px-2 py-1.5 rounded-md border border-border/50 bg-muted/20 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    )}
                     <Textarea
                       value={value}
                       onChange={(e) => onChange?.(key, e.target.value)}
