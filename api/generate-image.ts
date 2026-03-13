@@ -22,13 +22,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { prompt, provider, aspectRatio } = req.body;
+    const { prompt, provider, aspectRatio, imageSize } = req.body;
 
     if (!prompt || !provider) {
       return res.status(400).json({ error: 'Prompt and provider are required' });
     }
 
-    console.log('Sending image generation request to n8n:', { prompt, provider, aspectRatio });
+    console.log('Sending image generation request to n8n:', { prompt, provider, aspectRatio, imageSize });
 
     const response = await fetch(webhookUrl, {
       method: 'POST',
@@ -39,6 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         prompt,
         provider,
         aspectRatio: aspectRatio || '1:1',
+        imageSize: imageSize || 'default',
       }),
     });
 

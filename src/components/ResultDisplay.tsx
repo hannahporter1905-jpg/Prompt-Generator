@@ -16,6 +16,7 @@ import { CreateBlendedPromptDialog } from "./CreateBlendedPromptDialog";
 import type { GeneratedImages } from "@/hooks/usePromptGenerator";
 import { useElapsedTime } from "@/hooks/useElapsedTime";
 import { normalizeN8nImageResponse } from "@/lib/n8nImage";
+import { ImageSizeSelect } from "./ImageSizeSelect";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -78,6 +79,9 @@ export function ResultDisplay({
 
   // Airtable record ID for the currently selected reference (needed for archive)
   const selectedRecordId = metadata?.reference ? getRecordId(metadata.reference, metadata?.brand || '') : '';
+
+  // Image size selection for generation
+  const [imageSize, setImageSize] = useState<string>("default");
 
   // Create blended prompt dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -327,6 +331,7 @@ export function ResultDisplay({
           prompt: editablePrompt,
           provider,
           aspectRatio: metadata?.aspectRatio || "1:1",
+          imageSize,
         }),
       });
 
@@ -744,6 +749,14 @@ export function ResultDisplay({
       {/* Image Generation Section */}
       <div className="bg-card rounded-xl border border-border p-4 sm:p-6 shadow-md">
         <p className="text-center text-muted-foreground text-xs sm:text-sm mb-4">Generate images using this prompt</p>
+        <div className="mb-4">
+          <ImageSizeSelect
+            label="Image Size"
+            value={imageSize}
+            onChange={setImageSize}
+            placeholder="Default (provider decides)"
+          />
+        </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
           <Button
             onClick={() => handleGenerateImage("chatgpt")}
