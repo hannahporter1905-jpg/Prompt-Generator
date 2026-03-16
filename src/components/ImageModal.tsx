@@ -129,18 +129,20 @@ export function ImageModal({
 
   return (
     <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/80" style={{ zIndex: 1000 }} onClick={handleClose} />
+      {/* Backdrop — fully opaque so nothing bleeds through */}
+      <div className="fixed inset-0 bg-black/92" style={{ zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.92)' }} onClick={handleClose} />
 
-      {/* Row: modal + right-side thumbnail strip */}
+      {/* Outer: centers the whole row */}
       <div
-        className="fixed inset-0 flex items-center justify-center gap-4 p-4 pointer-events-none"
+        className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none"
         style={{ zIndex: 1001 }}
       >
+        {/* Inner: stretches modal + strip to the SAME height */}
+        <div className="flex gap-4 items-stretch pointer-events-none" style={{ maxHeight: '88vh', width: 'min(calc(100vw - 32px), 928px)' }}>
+
         {/* ── Main modal ── */}
         <div
-          className="pointer-events-auto bg-card rounded-2xl border border-border/60 shadow-2xl flex flex-col overflow-hidden"
-          style={{ width: 'min(88vw, 760px)', maxHeight: '88vh' }}
+          className="pointer-events-auto bg-card rounded-2xl border border-border/60 shadow-2xl flex flex-col overflow-hidden flex-1 min-w-0"
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
@@ -217,11 +219,11 @@ export function ImageModal({
           </div>
         </div>
 
-        {/* ── Right-side thumbnail strip (vertical, 3 visible, scrollable) ── */}
+        {/* ── Right-side thumbnail strip — stretches to match modal height ── */}
         {showStrip && (
           <div
-            className="pointer-events-auto flex flex-col bg-card/95 backdrop-blur rounded-2xl border border-border/60 shadow-2xl overflow-hidden shrink-0"
-            style={{ width: 152, maxHeight: '88vh' }}
+            className="pointer-events-auto flex flex-col bg-card/95 rounded-2xl border border-border/60 shadow-2xl overflow-hidden shrink-0"
+            style={{ width: 152 }}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -261,7 +263,8 @@ export function ImageModal({
             </div>
           </div>
         )}
-      </div>
+        </div>{/* end inner stretch wrapper */}
+      </div>{/* end outer centering wrapper */}
 
       <HtmlConversionModal isOpen={showHtmlModal} onClose={() => setShowHtmlModal(false)} imageUrl={current.editUrl} />
     </>
