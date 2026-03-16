@@ -48,6 +48,9 @@ export function ReferencePromptDataDisplay({ data, isLoading, disabled, brand, o
   // Per-field instruction text — user types what they want GPT to focus on when regenerating that field
   const [fieldInstructions, setFieldInstructions] = useState<Partial<Record<RegenerableField, string>>>({});
 
+  // Global direction — applies to ALL fields during Regenerate All (and single-field regeneration)
+  const [globalInstruction, setGlobalInstruction] = useState('');
+
   // Regenerate a single field (called by the icon button next to the label)
   const handleRegenerate = async (field: RegenerableField) => {
     if (!data || !onChange) return;
@@ -63,7 +66,8 @@ export function ReferencePromptDataDisplay({ data, isLoading, disabled, brand, o
           brand,
           category,
           temperature,
-          instruction:     fieldInstructions[field] || '',
+          instruction:        fieldInstructions[field] || '',
+          globalInstruction:  globalInstruction.trim(),
           format_layout:   data.format_layout,
           primary_object:  data.primary_object,
           subject:         data.subject,
@@ -100,7 +104,8 @@ export function ReferencePromptDataDisplay({ data, isLoading, disabled, brand, o
               brand,
               category,
               temperature,
-              instruction: '',
+              instruction:        '',
+              globalInstruction:  globalInstruction.trim(),
               format_layout:   data.format_layout,
               primary_object:  data.primary_object,
               ...updatedFields,
@@ -138,7 +143,8 @@ export function ReferencePromptDataDisplay({ data, isLoading, disabled, brand, o
             brand,
             category,
             temperature,
-            instruction: '',
+            instruction:        fieldInstructions[field] || '',
+            globalInstruction:  globalInstruction.trim(),
             format_layout:   data.format_layout,
             primary_object:  data.primary_object,
             subject:         data.subject,
@@ -173,7 +179,8 @@ export function ReferencePromptDataDisplay({ data, isLoading, disabled, brand, o
           brand,
           category,
           temperature,
-          instruction: '',
+          instruction:        fieldInstructions['positive_prompt'] || '',
+          globalInstruction:  globalInstruction.trim(),
           format_layout:   data.format_layout,
           primary_object:  data.primary_object,
           subject:         subjectResult?.value    ?? data.subject,
@@ -244,6 +251,20 @@ export function ReferencePromptDataDisplay({ data, isLoading, disabled, brand, o
               {/* Top action bar */}
               {onChange && (
                 <div className="space-y-3">
+                  {/* Global direction — applies to all fields during Regenerate All */}
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">
+                      Overall direction for all fields (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={globalInstruction}
+                      onChange={e => setGlobalInstruction(e.target.value)}
+                      placeholder="e.g. 'Christmas themed', 'Dark neon cyberpunk', 'Wild West style'..."
+                      disabled={anyBusy}
+                      className="w-full text-xs px-2 py-1.5 rounded-md border border-border/50 bg-muted/20 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
@@ -313,7 +334,10 @@ export function ReferencePromptDataDisplay({ data, isLoading, disabled, brand, o
                         type="text"
                         value={fieldInstructions[key as RegenerableField] || ''}
                         onChange={(e) => setFieldInstructions(prev => ({ ...prev, [key]: e.target.value }))}
-                        placeholder={`Instruction (optional) — e.g. describe what you want for ${FIELD_LABELS[key].toLowerCase()}`}
+                        placeholder={key === 'background'
+                          ? "Instruction — e.g. 'dark casino floor matching the subject', 'outdoor stadium at night'"
+                          : `Instruction (optional) — e.g. describe what you want for ${FIELD_LABELS[key].toLowerCase()}`
+                        }
                         disabled={!!disabled || anyBusy}
                         className="w-full text-xs px-2 py-1.5 rounded-md border border-border/50 bg-muted/20 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
