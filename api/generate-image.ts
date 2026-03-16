@@ -44,7 +44,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Cloud Run error:', response.status, errorText);
-        return res.status(response.status).json({ error: 'Cloud Run failed', details: errorText });
+        return res.status(500).json({
+          error: `Cloud Run failed (${response.status}): ${errorText || 'No details returned'}`
+        });
       }
 
       const data = await response.json();
