@@ -135,44 +135,11 @@ export function ImageModal({
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/75 backdrop-blur-sm" style={{ zIndex: 1000 }} onClick={handleClose} />
 
-      {/* Centered row: thumbnail strip + modal */}
+      {/* Centered row: modal + thumbnail strip */}
       <div
-        className="fixed inset-0 flex items-center justify-center gap-3 p-4 pointer-events-none"
+        className="fixed inset-0 flex items-center justify-center gap-4 p-4 pointer-events-none"
         style={{ zIndex: 1001 }}
       >
-        {/* ── Thumbnail strip (separate panel, left side) ── */}
-        {showStrip && (
-          <div
-            className="pointer-events-auto flex flex-col bg-card/95 backdrop-blur rounded-2xl border border-border/60 shadow-2xl overflow-hidden shrink-0"
-            style={{ width: 88, maxHeight: '80vh' }}
-          >
-            <div className="px-2 py-2.5 border-b border-border/40 text-center">
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
-                {allImages.length}
-              </span>
-            </div>
-            <div className="overflow-y-auto p-2 space-y-2 flex-1">
-              {allImages.map((img, i) => {
-                const display = { ...img, ...(updatedUrlsRef.current.get(img.imageId) ?? {}) };
-                const isActive = activeIdx === i;
-                return (
-                  <button
-                    key={img.imageId}
-                    onClick={() => { setActiveIdx(i); setEditInstructions(''); setEditError(null); }}
-                    className={`w-full aspect-square rounded-xl overflow-hidden border-2 block transition-all duration-150 ${
-                      isActive
-                        ? 'border-primary shadow-md shadow-primary/40 scale-95'
-                        : 'border-transparent hover:border-border hover:scale-[0.97]'
-                    }`}
-                  >
-                    <img src={display.displayUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* ── Main modal (same clean design as before) ── */}
         <div
           className="pointer-events-auto bg-card rounded-2xl border border-border/60 shadow-2xl flex flex-col overflow-hidden"
@@ -252,6 +219,42 @@ export function ImageModal({
             </div>
           </div>
         </div>
+
+        {/* ── Thumbnail strip (separate panel, RIGHT side) ── */}
+        {showStrip && (
+          <div
+            className="pointer-events-auto flex flex-col bg-card/95 backdrop-blur rounded-2xl border border-border/60 shadow-2xl overflow-hidden shrink-0"
+            style={{ width: 176, maxHeight: '88vh' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-3 py-2.5 border-b border-border/40 text-center">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
+                {activeIdx + 1} / {allImages.length}
+              </span>
+            </div>
+            <div className="overflow-y-auto p-2 flex-1">
+              <div className="grid grid-cols-2 gap-2">
+                {allImages.map((img, i) => {
+                  const display = { ...img, ...(updatedUrlsRef.current.get(img.imageId) ?? {}) };
+                  const isActive = activeIdx === i;
+                  return (
+                    <button
+                      key={img.imageId}
+                      onClick={() => { setActiveIdx(i); setEditInstructions(''); setEditError(null); }}
+                      className={`w-full aspect-square rounded-xl overflow-hidden border-2 block transition-all duration-150 ${
+                        isActive
+                          ? 'border-primary shadow-md shadow-primary/40 scale-95'
+                          : 'border-transparent hover:border-border hover:scale-[0.97]'
+                      }`}
+                    >
+                      <img src={display.displayUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <HtmlConversionModal isOpen={showHtmlModal} onClose={() => setShowHtmlModal(false)} imageUrl={current.editUrl} />

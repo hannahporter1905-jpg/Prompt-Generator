@@ -155,7 +155,7 @@ export function LikedImagesPanel({ isOpen, onClose, brand }: LikedImagesPanelPro
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
         style={{ zIndex: 998 }}
-        onClick={() => inSplitView ? setActiveIdx(null) : onClose()}
+        onClick={onClose}
         aria-hidden="true"
       />
 
@@ -166,6 +166,7 @@ export function LikedImagesPanel({ isOpen, onClose, brand }: LikedImagesPanelPro
         aria-label="Favorites panel"
         className="fixed right-4 flex flex-col bg-card rounded-2xl border border-border/60 overflow-hidden
           max-sm:inset-0 max-sm:right-0 max-sm:rounded-none max-sm:w-full max-sm:h-full"
+        onClick={e => e.stopPropagation()}
         style={{
           zIndex: 999,
           top: 'max(4vh, 16px)',
