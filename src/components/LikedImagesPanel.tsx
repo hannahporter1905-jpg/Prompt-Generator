@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { X, Heart, Loader2, AlertTriangle, Download, FileCode, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { X, Heart, Loader2, AlertTriangle, Download, FileCode, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { LikedImageCard } from './LikedImageCard';
 import { HtmlConversionModal } from './HtmlConversionModal';
 
@@ -43,6 +44,14 @@ export function LikedImagesPanel({ isOpen, onClose, brand }: LikedImagesPanelPro
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [showHtmlModal, setShowHtmlModal] = useState(false);
 
+  // Edit image state
+  const [editInstructions, setEditInstructions] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editedImgUrl, setEditedImgUrl] = useState<string | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const hasBrand = !!brand && brand !== 'Select a brand';
   const headerLabel = hasBrand ? `FAVORITES — ${brand.toUpperCase()}` : 'FAVORITES';
   const validRecords = records.filter(r => getImgUrl(r));
@@ -80,6 +89,25 @@ export function LikedImagesPanel({ isOpen, onClose, brand }: LikedImagesPanelPro
   }, [isOpen, hasBrand, fetchLikedImages]);
 
   useEffect(() => { if (!isOpen) setActiveIdx(null); }, [isOpen]);
+
+  // Reset edit state whenever the user switches to a different image
+  useEffect(() => {
+    setEditInstructions('');
+    setEditError(null);
+    setEditedImgUrl(null);
+    setElapsedTime(0);
+  }, [activeIdx]);
+
+  // Timer shown while editing is in progress
+  useEffect(() => {
+    if (isEditing) {
+      setElapsedTime(0);
+      intervalRef.current = setInterval(() => setElapsedTime(p => p + 1), 1000);
+    } else {
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    }
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [isEditing]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -143,6 +171,46 @@ export function LikedImagesPanel({ isOpen, onClose, brand }: LikedImagesPanelPro
         await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
+  };
+
+  const handleEditImage = async () => {
+    const srcUrl = editedImgUrl || activeImgUrl;
+    if (!editInstructions.trim() || !srcUrl) return;
+    setIsEditing(true); setEditError(null);
+    try {
+      const res = await fetch('/api/edit-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: srcUrl, editInstructions: editInstructions.trim(), resolution: '1K' }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Failed'); }
+      const data = await res.json();
+      const rd = Array.isArray(data) ? data[0] : data;
+      const newUrl = rd.thumbnailUrl || rd.imageUrl || rd.thumbnailLink || rd.webContentLink;
+      if (!newUrl) throw new Error('No image URL returned from edit');
+      setEditedImgUrl(newUrl);
+      setEditInstructions('');
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to edit image');
+    } finally { setIsEditing(false); }
+  };
+
+  // Save the edited image back to Airtable favorites so it appears in the grid
+  const handleSaveEditedToFavorites = async () => {
+    if (!editedImgUrl || !brand) return;
+    try {
+      await fetch('https://automateoptinet.app.n8n.cloud/webhook/like-img', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          record_id: `edited-${Date.now()}`,
+          img_url: editedImgUrl,
+          brand_name: brand,
+        }),
+      });
+      setEditedImgUrl(null);
+      await fetchLikedImages(); // refresh the grid to show the new image
+    } catch { /* non-fatal */ }
   };
 
   if (!isOpen) return null;
@@ -301,15 +369,52 @@ export function LikedImagesPanel({ isOpen, onClose, brand }: LikedImagesPanelPro
             {/* Image */}
             <div className="flex-1 overflow-auto flex items-center justify-center p-5 bg-muted/20 min-h-0">
               <img
-                key={activeImgUrl}
-                src={activeImgUrl}
+                key={editedImgUrl || activeImgUrl}
+                src={editedImgUrl || activeImgUrl}
                 alt={activeRecordId}
                 className="max-w-full max-h-full object-contain rounded-xl shadow-xl"
               />
             </div>
 
+            {/* Edit section */}
+            <div className="shrink-0 px-5 pt-4 pb-2 border-t border-border/40 space-y-2">
+              {editedImgUrl && (
+                <p className="text-xs text-emerald-600 font-medium">Edit applied! You can keep editing or save to favorites.</p>
+              )}
+              <Textarea
+                placeholder="Edit instructions (e.g. 'Change the background to sunset', 'Make it more vibrant')"
+                value={editInstructions}
+                onChange={e => setEditInstructions(e.target.value)}
+                className="min-h-[72px] resize-none text-sm"
+                disabled={isEditing}
+              />
+              {editError && <p className="text-destructive text-xs">{editError}</p>}
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleEditImage}
+                  disabled={isEditing || !editInstructions.trim()}
+                  variant="outline"
+                  className="gap-2 flex-1 text-xs h-8"
+                >
+                  {isEditing
+                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span className="tabular-nums">{elapsedTime}s</span></>
+                    : <><Wand2 className="w-3.5 h-3.5" />Apply Edit & Regenerate</>}
+                </Button>
+                {editedImgUrl && (
+                  <Button
+                    onClick={handleSaveEditedToFavorites}
+                    disabled={isEditing}
+                    size="sm"
+                    className="gap-1.5 h-8 text-xs gradient-primary"
+                  >
+                    <Heart className="w-3.5 h-3.5" />Save to Favorites
+                  </Button>
+                )}
+              </div>
+            </div>
+
             {/* Nav + actions */}
-            <div className="shrink-0 px-5 py-4 border-t border-border/40 flex items-center justify-between gap-3">
+            <div className="shrink-0 px-5 py-3 border-t border-border/40 flex items-center justify-between gap-3">
               <div className="flex items-center gap-1">
                 <Button variant="outline" size="icon" className="h-8 w-8" disabled={activeIdx === 0}
                   onClick={() => setActiveIdx(i => (i !== null && i > 0 ? i - 1 : i))}>
@@ -330,7 +435,7 @@ export function LikedImagesPanel({ isOpen, onClose, brand }: LikedImagesPanelPro
                   <Heart className="w-3.5 h-3.5 fill-current" />Unlike
                 </Button>
                 <Button size="sm" className="gap-1.5 h-8 text-xs gradient-primary"
-                  onClick={() => activeImgUrl && activeRecordId && handleDownload(activeImgUrl, activeRecordId)}>
+                  onClick={() => (editedImgUrl || activeImgUrl) && activeRecordId && handleDownload(editedImgUrl || activeImgUrl!, activeRecordId)}>
                   <Download className="w-3.5 h-3.5" />Download
                 </Button>
               </div>
@@ -358,9 +463,40 @@ export function LikedImagesPanel({ isOpen, onClose, brand }: LikedImagesPanelPro
             </button>
           </div>
           <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-muted/20 min-h-0">
-            <img src={activeImgUrl} alt={activeRecordId} className="max-w-full max-h-full object-contain rounded-xl shadow-xl" />
+            <img src={editedImgUrl || activeImgUrl} alt={activeRecordId} className="max-w-full max-h-full object-contain rounded-xl shadow-xl" />
           </div>
-          <div className="shrink-0 px-5 py-4 border-t border-border/40 flex items-center justify-between gap-3">
+          {/* Mobile edit section */}
+          <div className="shrink-0 px-4 pt-3 pb-1 border-t border-border/40 space-y-2">
+            {editedImgUrl && (
+              <p className="text-xs text-emerald-600 font-medium">Edit applied! Save to keep it.</p>
+            )}
+            <Textarea
+              placeholder="Edit instructions…"
+              value={editInstructions}
+              onChange={e => setEditInstructions(e.target.value)}
+              className="min-h-[64px] resize-none text-sm"
+              disabled={isEditing}
+            />
+            {editError && <p className="text-destructive text-xs">{editError}</p>}
+            <div className="flex gap-2">
+              <Button
+                onClick={handleEditImage}
+                disabled={isEditing || !editInstructions.trim()}
+                variant="outline"
+                className="gap-1.5 flex-1 text-xs h-8"
+              >
+                {isEditing
+                  ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span className="tabular-nums">{elapsedTime}s</span></>
+                  : <><Wand2 className="w-3.5 h-3.5" />Apply Edit</>}
+              </Button>
+              {editedImgUrl && (
+                <Button onClick={handleSaveEditedToFavorites} disabled={isEditing} size="sm" className="gap-1.5 h-8 text-xs gradient-primary">
+                  <Heart className="w-3.5 h-3.5" />Save
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="shrink-0 px-5 py-3 border-t border-border/40 flex items-center justify-between gap-3">
             <div className="flex items-center gap-1">
               <Button variant="outline" size="icon" className="h-8 w-8" disabled={activeIdx === 0}
                 onClick={() => setActiveIdx(i => (i !== null && i > 0 ? i - 1 : i))}>
@@ -378,7 +514,7 @@ export function LikedImagesPanel({ isOpen, onClose, brand }: LikedImagesPanelPro
                 <Heart className="w-3.5 h-3.5 fill-current" />Unlike
               </Button>
               <Button size="sm" className="gap-1.5 h-8 text-xs gradient-primary"
-                onClick={() => activeImgUrl && activeRecordId && handleDownload(activeImgUrl, activeRecordId)}>
+                onClick={() => (editedImgUrl || activeImgUrl) && activeRecordId && handleDownload(editedImgUrl || activeImgUrl!, activeRecordId)}>
                 <Download className="w-3.5 h-3.5" />Download
               </Button>
             </div>
