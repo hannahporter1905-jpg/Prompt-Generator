@@ -179,12 +179,12 @@ export function LikedImagesPanel({ isOpen, onClose, brand }: LikedImagesPanelPro
       {/* ── Floating image preview (centered, shown when an image is selected) ── */}
       {activeIdx !== null && activeImgUrl && (
         <div
-          className="fixed inset-0 flex items-center justify-center pointer-events-none"
-          style={{ zIndex: 999 }}
+          className="fixed inset-0 flex items-center justify-center pointer-events-none p-4"
+          style={{ zIndex: 1002 }}
         >
           <div
-            className="pointer-events-auto bg-card rounded-2xl border border-border/60 shadow-2xl flex flex-col overflow-hidden"
-            style={{ width: 'min(60vw, 680px)', maxHeight: '88vh' }}
+            className="pointer-events-auto bg-card rounded-2xl border border-border/60 shadow-2xl flex flex-col overflow-hidden w-full sm:w-auto"
+            style={{ width: 'min(90vw, 680px)', maxHeight: '90vh' }}
             onClick={e => e.stopPropagation()}
           >
             {/* Preview header */}
