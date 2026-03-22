@@ -1,41 +1,50 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createSign } from 'crypto';
 
-async function getCloudRunIdToken(): Promise<string> {
-  const refreshToken = process.env.CLOUD_RUN_REFRESH_TOKEN;
-  const clientId     = process.env.CLOUD_RUN_CLIENT_ID;
-  const clientSecret = process.env.CLOUD_RUN_CLIENT_SECRET;
+// Uses a Google Service Account JSON key to get a short-lived ID token for Cloud Run.
+// The service account JSON is stored as a single env var — no refresh tokens needed.
+async function getCloudRunIdToken(cloudRunUrl: string): Promise<string> {
+  const saJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!saJson) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON env var is not set');
 
-  if (!refreshToken || !clientId || !clientSecret) {
-    const missing = [
-      !refreshToken && 'CLOUD_RUN_REFRESH_TOKEN',
-      !clientId     && 'CLOUD_RUN_CLIENT_ID',
-      !clientSecret && 'CLOUD_RUN_CLIENT_SECRET',
-    ].filter(Boolean).join(', ');
-    throw new Error(`Missing Cloud Run auth env vars: ${missing}`);
+  let sa: { client_email: string; private_key: string };
+  try {
+    sa = JSON.parse(saJson);
+  } catch {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON');
   }
 
-  // Log token lengths to help diagnose truncation issues
-  console.log('Cloud Run auth: token lengths —', {
-    refreshToken: refreshToken.length,
-    clientId: clientId.length,
-    clientSecret: clientSecret.length,
-  });
+  // Build a JWT that asks Google to issue an ID token scoped to our Cloud Run URL
+  const now = Math.floor(Date.now() / 1000);
+  const header  = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    iss: sa.client_email,
+    sub: sa.client_email,
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+    target_audience: cloudRunUrl, // tells Google which service we want to call
+  })).toString('base64url');
 
+  const sign = createSign('RSA-SHA256');
+  sign.update(`${header}.${payload}`);
+  const signature = sign.sign(sa.private_key, 'base64url');
+  const jwt = `${header}.${payload}.${signature}`;
+
+  // Exchange the signed JWT for a Google-issued ID token
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      grant_type:    'refresh_token',
-      refresh_token: refreshToken,
-      client_id:     clientId,
-      client_secret: clientSecret,
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt,
     }),
   });
 
   if (!response.ok) {
     const errorBody = await response.text();
     console.error('Google token endpoint error:', response.status, errorBody);
-    throw new Error(`Failed to refresh Cloud Run token (${response.status}): ${errorBody}`);
+    throw new Error(`Failed to get Cloud Run ID token (${response.status}): ${errorBody}`);
   }
 
   const data = await response.json();
@@ -58,14 +67,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Prompt and provider are required' });
     }
 
-    // ── Cloud Run backend (high-res 1K/2K/4K) ──────────────────────────────
+    // ── Cloud Run backend (high-res 1K/2K/3K/4K) ───────────────────────────
     if (backend === 'cloud-run') {
       const cloudRunUrl = process.env.CLOUD_RUN_URL || process.env.NEXT_PUBLIC_IMAGE_API_URL;
       if (!cloudRunUrl) {
         return res.status(500).json({ error: 'CLOUD_RUN_URL is not configured' });
       }
 
-      const idToken = await getCloudRunIdToken();
+      const idToken = await getCloudRunIdToken(cloudRunUrl);
 
       console.log('Sending to Cloud Run backend:', { prompt, provider, aspectRatio, resolution });
 
