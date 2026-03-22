@@ -1,33 +1,64 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-async function getCloudRunIdToken(): Promise<string> {
-  const refreshToken = process.env.CLOUD_RUN_REFRESH_TOKEN;
-  const clientId     = process.env.CLOUD_RUN_CLIENT_ID;
-  const clientSecret = process.env.CLOUD_RUN_CLIENT_SECRET;
+async function getCloudRunIdToken(cloudRunUrl: string, req: VercelRequest): Promise<string> {
+  const workloadProvider = process.env.GCP_WORKLOAD_PROVIDER;
+  const serviceAccount   = process.env.GCP_SERVICE_ACCOUNT;
 
-  if (!refreshToken || !clientId || !clientSecret) {
-    throw new Error('Missing Cloud Run auth env vars');
+  if (!workloadProvider || !serviceAccount) {
+    const missing = [
+      !workloadProvider && 'GCP_WORKLOAD_PROVIDER',
+      !serviceAccount   && 'GCP_SERVICE_ACCOUNT',
+    ].filter(Boolean).join(', ');
+    throw new Error(`Missing env vars: ${missing}`);
   }
 
-  const response = await fetch('https://oauth2.googleapis.com/token', {
+  const oidcToken =
+    (req.headers['x-vercel-oidc-token'] as string | undefined) ||
+    process.env.VERCEL_OIDC_TOKEN;
+
+  if (!oidcToken) {
+    throw new Error('No Vercel OIDC token found. Make sure OIDC is enabled in Vercel project settings.');
+  }
+
+  // Step 1: Exchange Vercel OIDC token → Google federated access token
+  const stsRes = await fetch('https://sts.googleapis.com/v1/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      grant_type:    'refresh_token',
-      refresh_token: refreshToken,
-      client_id:     clientId,
-      client_secret: clientSecret,
+      grant_type:           'urn:ietf:params:oauth:grant-type:token-exchange',
+      audience:             `//iam.googleapis.com/${workloadProvider}`,
+      scope:                'https://www.googleapis.com/auth/cloud-platform',
+      requested_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+      subject_token_type:   'urn:ietf:params:oauth:token-type:jwt',
+      subject_token:        oidcToken,
     }),
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to refresh Cloud Run token: ${error}`);
+  if (!stsRes.ok) {
+    const err = await stsRes.text();
+    throw new Error(`Google STS token exchange failed (${stsRes.status}): ${err}`);
   }
+  const { access_token: federatedToken } = await stsRes.json();
 
-  const data = await response.json();
-  if (data.id_token) return data.id_token;
-  throw new Error('No id_token returned from Google token endpoint');
+  // Step 2: Use federated token to generate a Cloud Run ID token
+  const idTokenRes = await fetch(
+    `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${serviceAccount}:generateIdToken`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${federatedToken}`,
+      },
+      body: JSON.stringify({ audience: cloudRunUrl, includeEmail: true }),
+    }
+  );
+
+  if (!idTokenRes.ok) {
+    const err = await idTokenRes.text();
+    throw new Error(`generateIdToken failed (${idTokenRes.status}): ${err}`);
+  }
+  const { token } = await idTokenRes.json();
+  return token;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -38,8 +69,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const baseUrl = process.env.CLOUD_RUN_URL || 'https://image-generator-933050179388.us-central1.run.app';
-  const cloudRunUrl = `${baseUrl}/edit-image`;
+  const baseUrl =
+    process.env.GCP_CLOUD_RUN_URL ||
+    process.env.CLOUD_RUN_URL ||
+    'https://image-generator-69452143295.us-central1.run.app';
 
   try {
     const { imageUrl, editInstructions, resolution = '1K' } = req.body;
@@ -48,14 +81,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Image URL and edit instructions are required' });
     }
 
-    const idToken = await getCloudRunIdToken();
+    const idToken = await getCloudRunIdToken(baseUrl, req);
 
     console.log('Sending image edit request to Cloud Run:', { imageUrl, editInstructions, resolution });
 
-    const response = await fetch(cloudRunUrl, {
+    const response = await fetch(`${baseUrl}/edit-image`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type':  'application/json',
         'Authorization': `Bearer ${idToken}`,
       },
       body: JSON.stringify({ imageUrl, editInstructions, resolution }),
@@ -69,13 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const data = await response.json();
     console.log('Cloud Run image edit response:', data);
-
-    const webViewLink =
-      data.webViewLink ||
-      data.viewUrl ||
-      (data.fileId ? `https://drive.google.com/file/d/${data.fileId}/view?usp=drivesdk` : null);
-
-    return res.status(200).json({ ...data, webViewLink });
+    return res.status(200).json(data);
 
   } catch (error) {
     console.error('Image edit error:', error);
