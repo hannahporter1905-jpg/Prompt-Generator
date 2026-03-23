@@ -235,8 +235,8 @@ function ImageCard({ image, onClick }: { image: GeneratedImage; onClick: () => v
         </div>
       )}
 
-      {/* Hover overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-2xl">
+      {/* Hover overlay — pointer-events-none so clicks pass through to the parent card */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-2xl">
         <div className="absolute bottom-0 left-0 right-0 p-3 flex items-end justify-between">
           <div className="space-y-0.5">
             {image.aspect_ratio !== 'edited' && (
@@ -250,7 +250,7 @@ function ImageCard({ image, onClick }: { image: GeneratedImage; onClick: () => v
             target="_blank"
             rel="noreferrer"
             onClick={e => e.stopPropagation()}
-            className="w-7 h-7 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/40 text-white transition-colors"
+            className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/40 text-white transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
           </a>
