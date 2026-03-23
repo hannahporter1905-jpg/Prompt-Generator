@@ -36,9 +36,6 @@ async function fetchAllAirtableRecords() {
 
   do {
     const url = new URL(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Web%20Image%20Analysis`);
-    // Only fetch the fields we need
-    url.searchParams.set('fields[]', 'prompt_category');
-    url.searchParams.set('fields[]', 'prompt_name');
     if (offset) url.searchParams.set('offset', offset);
 
     const res = await fetch(url.toString(), {
@@ -74,7 +71,7 @@ async function main() {
 
   for (const record of records) {
     const airtable_id = record.id;
-    const prompt_category = record.fields.prompt_category || null;
+    const prompt_category = record.fields.category || null;
     const prompt_name = record.fields.prompt_name || '(no name)';
 
     if (!prompt_category) {
