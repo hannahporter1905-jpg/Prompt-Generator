@@ -964,6 +964,7 @@ export function ResultDisplay({
             likedImages={favorites}
             onToggleFavorite={handleToggleFavorite}
             resolution={resolution}
+            brand={metadata?.brand}
           />
         );
       })()}

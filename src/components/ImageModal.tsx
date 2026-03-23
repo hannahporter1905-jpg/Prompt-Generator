@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Download, FileCode, Loader2, Wand2, Bot, Gem } from 'lucide-react';
+import { X, Download, FileCode, Loader2, Wand2, Bot, Gem, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { HtmlConversionModal } from './HtmlConversionModal';
@@ -28,6 +28,7 @@ interface ImageModalProps {
   initialIndex?: number;
   likedImages?: Set<string>;
   resolution?: string;
+  brand?: string;
 }
 
 export function ImageModal({
@@ -44,6 +45,7 @@ export function ImageModal({
   initialIndex = 0,
   likedImages,
   resolution = '1K',
+  brand,
 }: ImageModalProps) {
   const isGallery = allImages && allImages.length > 0;
   const showStrip = isGallery && allImages.length > 1;
@@ -56,8 +58,12 @@ export function ImageModal({
   const [elapsedTime, setElapsedTime] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const updatedUrlsRef = useRef<Map<string, { displayUrl: string; editUrl: string }>>(new Map());
+  // Tracks the latest edited URL for the current image (so we can offer "Save Edited to Favorites")
+  const [lastEditedUrl, setLastEditedUrl] = useState<string | null>(null);
 
   useEffect(() => { if (isOpen) setActiveIdx(initialIndex); }, [isOpen, initialIndex]);
+  // Reset edit state when switching images
+  useEffect(() => { setLastEditedUrl(null); setEditInstructions(''); setEditError(null); }, [activeIdx]);
 
   const current: GalleryImage = isGallery
     ? { ...allImages[activeIdx], ...(updatedUrlsRef.current.get(allImages[activeIdx].imageId) ?? {}) }
@@ -113,6 +119,7 @@ export function ImageModal({
       const newEdit = rd.viewUrl || rd.webViewLink || rd.imageUrl || (rd.fileId ? `https://drive.google.com/file/d/${rd.fileId}/view?usp=drivesdk` : null);
       if (newDisplay && newEdit) {
         if (isGallery) updatedUrlsRef.current.set(current.imageId, { displayUrl: newDisplay, editUrl: newEdit });
+        setLastEditedUrl(newDisplay);
         setEditInstructions('');
         onImageUpdated?.(newDisplay, newEdit);
         setActiveIdx(i => i);
@@ -197,6 +204,9 @@ export function ImageModal({
 
           {/* Edit + actions */}
           <div className="shrink-0 p-4 space-y-3 border-t border-border/40">
+            {lastEditedUrl && (
+              <p className="text-xs text-emerald-600 font-medium">Edit applied! You can keep editing or save it to favorites.</p>
+            )}
             <Textarea
               placeholder="Enter editing instructions (e.g., 'Make the character face forward', 'Zoom in on the subject')"
               value={editInstructions}
@@ -216,6 +226,30 @@ export function ImageModal({
                   ? <><Loader2 className="w-4 h-4 animate-spin" /><span className="tabular-nums">{elapsedTime}s</span></>
                   : <><Wand2 className="w-4 h-4" />Apply Edit & Regenerate</>}
               </Button>
+              {lastEditedUrl && brand && (
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  disabled={isEditing}
+                  onClick={async () => {
+                    try {
+                      await fetch('https://automateoptinet.app.n8n.cloud/webhook/like-img', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          record_id: `edited-${Date.now()}`,
+                          img_url: lastEditedUrl,
+                          brand_name: brand,
+                        }),
+                      });
+                      setLastEditedUrl(null);
+                    } catch { /* non-fatal */ }
+                  }}
+                >
+                  <Heart className="w-4 h-4" />
+                  Save to Favorites
+                </Button>
+              )}
               <Button variant="outline" className="gap-2" onClick={() => setShowHtmlModal(true)} disabled={isEditing}>
                 <FileCode className="w-4 h-4" />
                 Convert to HTML
