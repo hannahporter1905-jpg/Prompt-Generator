@@ -177,41 +177,53 @@ function Lightbox({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex bg-black/90 backdrop-blur-md">
+      {/* Lightbox — flex-col on small screens, flex-row on lg+ */}
+      <div className="fixed inset-0 z-50 flex flex-col lg:flex-row bg-black/90 backdrop-blur-md">
 
-        {/* Close */}
+        {/* Close — always top-right corner */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+          className="absolute top-3 right-3 z-20 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
 
-        {/* Prev */}
-        <button onClick={onPrev} disabled={!hasPrev}
-          className={`absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
-            hasPrev ? 'bg-white/10 hover:bg-white/20 text-white' : 'opacity-0 pointer-events-none'
-          }`}
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
+        {/* Image area — fills available space, arrows inside so they never overlap the panel */}
+        <div className="relative flex-1 flex items-center justify-center p-8 lg:p-10 min-h-0 cursor-pointer" onClick={onClose}>
 
-        {/* Image */}
-        <div className="flex-1 flex items-center justify-center p-16 cursor-pointer" onClick={onClose}>
+          {/* Prev arrow */}
+          <button onClick={e => { e.stopPropagation(); onPrev(); }} disabled={!hasPrev}
+            className={`absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
+              hasPrev ? 'bg-white/10 hover:bg-white/20 text-white' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+
+          {/* Image — always full original resolution */}
           <img
             src={image.public_url}
             alt={image.filename}
-            className="max-h-full max-w-full object-contain rounded-2xl shadow-2xl"
+            className="max-h-full max-w-full object-contain rounded-xl lg:rounded-2xl shadow-2xl"
             onClick={e => e.stopPropagation()}
           />
+
+          {/* Next arrow */}
+          <button onClick={e => { e.stopPropagation(); onNext(); }} disabled={!hasNext}
+            className={`absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
+              hasNext ? 'bg-white/10 hover:bg-white/20 text-white' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Right panel */}
-        <div className="w-72 flex-shrink-0 bg-zinc-900 border-l border-white/10 flex flex-col overflow-y-auto">
+        {/* Right panel — bottom sheet on mobile, sidebar on lg+ */}
+        <div className="w-full lg:w-64 xl:w-72 flex-shrink-0 bg-zinc-900 border-t lg:border-t-0 lg:border-l border-white/10 flex flex-col overflow-y-auto max-h-[45vh] lg:max-h-none">
 
           {/* Provider badge */}
           {showBadge && (
-            <div className="p-6 border-b border-white/10">
+            <div className="px-5 pt-5 pb-4 border-b border-white/10">
               <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold ${
                 isEdited
                   ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
@@ -227,31 +239,30 @@ function Lightbox({
             </div>
           )}
 
-          {/* Metadata */}
-          <div className="p-6 space-y-5 flex-1">
+          {/* Metadata — horizontal on mobile, vertical on lg */}
+          <div className="p-5 flex lg:flex-col gap-4 lg:gap-5 flex-wrap flex-1">
             {image.aspect_ratio && image.aspect_ratio !== 'edited' && (
-              <div>
-                <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Aspect Ratio</p>
-                <p className="text-white font-medium">{image.aspect_ratio}</p>
+              <div className="min-w-[80px]">
+                <p className="text-[10px] text-white/40 uppercase tracking-wider mb-0.5">Aspect Ratio</p>
+                <p className="text-white font-medium text-sm">{image.aspect_ratio}</p>
               </div>
             )}
-            <div>
-              <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Resolution</p>
-              <p className="text-white font-medium">{image.resolution}</p>
+            <div className="min-w-[80px]">
+              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-0.5">Resolution</p>
+              <p className="text-white font-medium text-sm">{image.resolution}</p>
             </div>
-            <div>
-              <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Created</p>
-              <p className="text-white/80 text-sm">{formatDate(image.created_at)}</p>
+            <div className="min-w-[120px]">
+              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-0.5">Created</p>
+              <p className="text-white/80 text-xs">{formatDate(image.created_at)}</p>
             </div>
-            <div>
-              <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Filename</p>
+            <div className="hidden lg:block">
+              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-0.5">Filename</p>
               <p className="text-white/60 text-xs break-all font-mono">{image.filename}</p>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="p-6 border-t border-white/10 space-y-2">
-            {/* Convert to HTML */}
+          <div className="p-5 border-t border-white/10 space-y-2">
             <button
               onClick={() => setShowHtmlModal(true)}
               className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm font-medium transition-colors"
@@ -260,7 +271,6 @@ function Lightbox({
               Convert to HTML
             </button>
 
-            {/* Download */}
             <button
               onClick={handleDownload}
               disabled={isDownloading}
@@ -270,7 +280,6 @@ function Lightbox({
               {isDownloading ? 'Downloading…' : 'Download Image'}
             </button>
 
-            {/* Delete */}
             {!confirmDelete ? (
               <button
                 onClick={() => setConfirmDelete(true)}
@@ -281,20 +290,14 @@ function Lightbox({
               </button>
             ) : (
               <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 space-y-2">
-                <p className="text-xs text-white/70 text-center">Remove this image permanently?</p>
+                <p className="text-xs text-white/70 text-center">Remove permanently?</p>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setConfirmDelete(false)}
-                    disabled={isDeleting}
-                    className="flex-1 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-colors"
-                  >
+                  <button onClick={() => setConfirmDelete(false)} disabled={isDeleting}
+                    className="flex-1 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-colors">
                     Cancel
                   </button>
-                  <button
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                    className="flex-1 py-1.5 rounded-lg bg-destructive hover:bg-destructive/90 text-white text-xs font-medium transition-colors"
-                  >
+                  <button onClick={handleDelete} disabled={isDeleting}
+                    className="flex-1 py-1.5 rounded-lg bg-destructive hover:bg-destructive/90 text-white text-xs font-medium transition-colors">
                     {isDeleting ? 'Removing…' : 'Remove'}
                   </button>
                 </div>
@@ -304,15 +307,6 @@ function Lightbox({
             <p className="text-center text-white/30 text-xs pt-1">{idx + 1} of {all.length}</p>
           </div>
         </div>
-
-        {/* Next */}
-        <button onClick={onNext} disabled={!hasNext}
-          className={`absolute right-[18.5rem] top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
-            hasNext ? 'bg-white/10 hover:bg-white/20 text-white' : 'opacity-0 pointer-events-none'
-          }`}
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
       </div>
 
       {/* HTML Conversion Modal */}
@@ -504,20 +498,20 @@ export default function ImageLibrary() {
 
           {/* Filter tabs */}
           <div className="flex-1 flex items-center justify-center">
-            <div className="flex items-center gap-1 bg-muted/60 rounded-xl p-1">
+            <div className="flex items-center gap-0.5 bg-muted/60 rounded-xl p-1">
               {FILTERS.map(f => {
-                const Icon  = f.icon;
+                const Icon   = f.icon;
                 const active = filter === f.value;
                 return (
                   <button
                     key={f.value}
                     onClick={() => handleFilter(f.value)}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                    className={`flex items-center gap-1.5 px-3 xl:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
                       active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     <Icon className={`w-3.5 h-3.5 ${f.value === 'edit' && active ? 'text-amber-500' : ''}`} />
-                    {f.label}
+                    <span className="hidden sm:inline">{f.label}</span>
                   </button>
                 );
               })}
@@ -569,7 +563,7 @@ export default function ImageLibrary() {
 
         {/* Skeleton */}
         {isLoading && images.length === 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {Array.from({ length: 24 }).map((_, i) => (
               <div key={i} className="rounded-2xl bg-muted/60 animate-pulse aspect-[4/3]" />
             ))}
@@ -578,7 +572,7 @@ export default function ImageLibrary() {
 
         {/* Grid */}
         {images.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {images.map(image => (
               <ImageCard
                 key={image.id}

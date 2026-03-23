@@ -353,7 +353,7 @@ export function LikedImagesPanel({ isOpen, onClose, brand }: LikedImagesPanelPro
             <div className="flex-1 overflow-auto flex items-center justify-center p-5 bg-muted/20 min-h-0">
               <img
                 key={editedImgUrl || activeImgUrl}
-                src={editedImgUrl ? editedImgUrl : supabaseThumbnail(activeImgUrl || '', 800)}
+                src={editedImgUrl || activeImgUrl}
                 alt={activeRecordId}
                 className="max-w-full max-h-full object-contain rounded-xl shadow-xl"
               />
@@ -446,7 +446,7 @@ export function LikedImagesPanel({ isOpen, onClose, brand }: LikedImagesPanelPro
             </button>
           </div>
           <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-muted/20 min-h-0">
-            <img src={editedImgUrl ? editedImgUrl : supabaseThumbnail(activeImgUrl || '', 800)} alt={activeRecordId} className="max-w-full max-h-full object-contain rounded-xl shadow-xl" />
+            <img src={editedImgUrl || activeImgUrl} alt={activeRecordId} className="max-w-full max-h-full object-contain rounded-xl shadow-xl" />
           </div>
           {/* Mobile edit section */}
           <div className="shrink-0 px-4 pt-3 pb-1 border-t border-border/40 space-y-2">
