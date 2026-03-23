@@ -59,13 +59,14 @@ async function fetchAllAirtableRecords(tableName) {
 
 /** POST to Supabase REST API (upsert) */
 async function supabaseUpsert(table, rows, onConflict) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+  const url = `${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`;
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type':  'application/json',
       'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       'apikey':        SUPABASE_SERVICE_ROLE_KEY,
-      'Prefer':        `resolution=merge-duplicates,return=minimal`,
+      'Prefer':        'resolution=merge-duplicates,return=minimal',
     },
     body: JSON.stringify(rows),
   });
