@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { HtmlConversionModal } from '@/components/HtmlConversionModal';
-import { supabaseThumbnail } from '@/lib/imageUtils';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -322,16 +321,16 @@ function Lightbox({
 // ── Image card ─────────────────────────────────────────────────────────────────
 
 function ImageCard({
-  image, onClick, onDeleted,
+  image, onClick, onDeleted, priority,
 }: {
   image: GeneratedImage;
   onClick: () => void;
   onDeleted: (id: string) => void;
+  priority?: boolean;
 }) {
   const [loaded,         setLoaded]         = useState(false);
   const [confirmDelete,  setConfirmDelete]  = useState(false);
   const [isDeleting,     setIsDeleting]     = useState(false);
-  const [imgSrc,         setImgSrc]         = useState(() => supabaseThumbnail(image.public_url, 400));
   const showBadge = isSupabaseImage(image.public_url);
 
   const handleDelete = async () => {
@@ -354,16 +353,14 @@ function ImageCard({
       {!loaded && <div className="absolute inset-0 bg-muted/60 animate-pulse rounded-2xl" />}
 
       <img
-        src={imgSrc}
+        src={image.public_url}
         alt={image.filename}
-        loading="lazy"
-        className={`w-full h-full object-cover rounded-2xl transition-transform duration-300 group-hover:scale-[1.03] ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        loading={priority ? 'eager' : 'lazy'}
+        decoding="async"
+        fetchPriority={priority ? 'high' : 'low'}
+        className={`w-full h-full object-cover rounded-2xl transition-all duration-300 group-hover:scale-[1.03] ${loaded ? 'opacity-100' : 'opacity-0'}`}
         onLoad={() => setLoaded(true)}
-        onError={() => {
-          // Supabase image transform not available — fall back to original URL
-          if (imgSrc !== image.public_url) setImgSrc(image.public_url);
-          else setLoaded(true); // show broken image rather than endless skeleton
-        }}
+        onError={() => setLoaded(true)}
       />
 
       {/* Provider badge — always visible, only for Supabase images */}
@@ -579,12 +576,13 @@ export default function ImageLibrary() {
         {/* Grid */}
         {images.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-            {images.map(image => (
+            {images.map((image, i) => (
               <ImageCard
                 key={image.id}
                 image={image}
                 onClick={() => setLightbox(image)}
                 onDeleted={handleDeleted}
+                priority={i < 10}
               />
             ))}
           </div>

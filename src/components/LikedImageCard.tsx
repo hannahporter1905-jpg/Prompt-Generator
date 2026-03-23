@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { Heart, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabaseThumbnail } from '@/lib/imageUtils';
 
 interface LikedImageCardProps {
   imgUrl: string;
@@ -12,17 +10,15 @@ interface LikedImageCardProps {
 }
 
 export function LikedImageCard({ imgUrl, recordId, onView, onDownload, onUnlike }: LikedImageCardProps) {
-  const [src, setSrc] = useState(() => supabaseThumbnail(imgUrl, 400));
-
   return (
     <div className="relative group w-full aspect-square rounded-xl overflow-hidden border border-border/60 shadow-sm">
       <img
-        src={src}
+        src={imgUrl}
         alt={recordId}
         className="w-full h-full object-cover cursor-pointer"
         loading="lazy"
+        decoding="async"
         onClick={onView}
-        onError={() => { if (src !== imgUrl) setSrc(imgUrl); }}
       />
       {/* Overlay buttons - always visible */}
       <div className="absolute top-2 left-2 flex gap-1.5 z-10">
