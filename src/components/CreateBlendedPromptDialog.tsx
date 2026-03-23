@@ -8,7 +8,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+
+const CATEGORIES = ['Casino - Promotions', 'Sports- Promotions'];
 
 interface CreateBlendedPromptDialogProps {
   open: boolean;
@@ -51,8 +54,9 @@ export function CreateBlendedPromptDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedData, setGeneratedData] = useState<ReferencePromptData | null>(null);
 
-  // Name the user types before saving the new reference
+  // Name and category the user sets before saving the new reference
   const [promptName, setPromptName] = useState('');
+  const [promptCategory, setPromptCategory] = useState('Casino - Promotions');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -63,6 +67,7 @@ export function CreateBlendedPromptDialog({
       setSelectedNames([]);
       setGeneratedData(null);
       setPromptName('');
+      setPromptCategory('Casino - Promotions');
       setError('');
     }
     onOpenChange(nextOpen);
@@ -163,7 +168,7 @@ export function CreateBlendedPromptDialog({
         body: JSON.stringify({
           title:          promptName.trim(),
           brand_name:     brand,
-          prompt_category: '',   // No category for blended prompts
+          prompt_category: promptCategory,
           ...generatedData,
         }),
       });
@@ -275,20 +280,35 @@ export function CreateBlendedPromptDialog({
                 </div>
               ))}
 
-              {/* Name input */}
-              <div className="space-y-1 pt-1 border-t border-border">
-                <Label htmlFor="blended-prompt-name" className="text-xs font-medium">
-                  Name for this reference <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="blended-prompt-name"
-                  value={promptName}
-                  onChange={e => { setPromptName(e.target.value); setError(''); }}
-                  onKeyDown={e => e.key === 'Enter' && handleSave()}
-                  placeholder="e.g. Neon Dragon Vault"
-                  disabled={isSaving}
-                  autoFocus
-                />
+              {/* Name + Category inputs */}
+              <div className="space-y-3 pt-1 border-t border-border">
+                <div className="space-y-1">
+                  <Label htmlFor="blended-prompt-name" className="text-xs font-medium">
+                    Name for this reference <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="blended-prompt-name"
+                    value={promptName}
+                    onChange={e => { setPromptName(e.target.value); setError(''); }}
+                    onKeyDown={e => e.key === 'Enter' && handleSave()}
+                    placeholder="e.g. Neon Dragon Vault"
+                    disabled={isSaving}
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium">Category</Label>
+                  <Select value={promptCategory} onValueChange={setPromptCategory} disabled={isSaving}>
+                    <SelectTrigger className="text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {error && <p className="text-sm text-destructive">{error}</p>}
