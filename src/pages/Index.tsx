@@ -1,5 +1,6 @@
-import { Sparkles } from "lucide-react";
+import { Images, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { PromptForm } from "@/components/PromptForm";
 import { ProcessingState } from "@/components/ProcessingState";
 import { ResultDisplay } from "@/components/ResultDisplay";
@@ -111,6 +112,10 @@ const Index = () => {
           <p className="text-muted-foreground text-base sm:text-lg max-w-lg mx-auto px-2">
             Create stunning AI image prompts tailored for your brand and campaign needs
           </p>
+          <Link to="/library" className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-muted hover:bg-muted/70 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Images className="w-4 h-4" />
+            Image Library
+          </Link>
         </div>
 
         {/* Main Card */}
