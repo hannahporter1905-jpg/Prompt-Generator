@@ -1,5 +1,20 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseDelete } from './_supabase';
+
+const SUPABASE_URL             = process.env.SUPABASE_URL             || '';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+async function sbDelete(path: string) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'apikey':        SUPABASE_SERVICE_ROLE_KEY,
+    },
+  });
+  if (!res.ok) throw new Error(`Supabase DELETE failed (${res.status}): ${await res.text()}`);
+  return true;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,11 +27,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { record_id, img_url } = req.body;
     if (!record_id && !img_url) return res.status(400).json({ error: 'record_id or img_url is required' });
 
-    // Delete by record_id if available, otherwise by img_url
     if (record_id) {
-      await supabaseDelete(`liked_images?record_id=eq.${encodeURIComponent(record_id)}`);
+      await sbDelete(`liked_images?record_id=eq.${encodeURIComponent(record_id)}`);
     } else {
-      await supabaseDelete(`liked_images?img_url=eq.${encodeURIComponent(img_url)}`);
+      await sbDelete(`liked_images?img_url=eq.${encodeURIComponent(img_url)}`);
     }
 
     return res.status(200).json({ success: true });

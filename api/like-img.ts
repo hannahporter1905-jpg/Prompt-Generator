@@ -1,5 +1,23 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabasePost } from './_supabase';
+
+const SUPABASE_URL             = process.env.SUPABASE_URL             || '';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+async function sbPost(path: string, body: object, extra?: Record<string, string>) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'apikey':        SUPABASE_SERVICE_ROLE_KEY,
+      ...extra,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Supabase POST failed (${res.status}): ${await res.text()}`);
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { record_id, img_url, brand_name } = req.body;
     if (!img_url) return res.status(400).json({ error: 'img_url is required' });
 
-    await supabasePost(
+    await sbPost(
       'liked_images',
       {
         record_id:  record_id || `liked-${Date.now()}`,

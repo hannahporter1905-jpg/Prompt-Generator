@@ -1,5 +1,53 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseGet, supabasePost, supabasePatch, supabaseDelete, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from './_supabase';
+
+const SUPABASE_URL             = process.env.SUPABASE_URL             || '';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+function sbHeaders(extra?: Record<string, string>): Record<string, string> {
+  return {
+    'Content-Type':  'application/json',
+    'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    'apikey':        SUPABASE_SERVICE_ROLE_KEY,
+    ...extra,
+  };
+}
+
+async function sbGet(path: string) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: sbHeaders() });
+  if (!res.ok) throw new Error(`Supabase GET failed (${res.status}): ${await res.text()}`);
+  return res.json();
+}
+
+async function sbPost(path: string, body: object, extra?: Record<string, string>) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method: 'POST',
+    headers: sbHeaders(extra),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Supabase POST failed (${res.status}): ${await res.text()}`);
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
+}
+
+async function sbPatch(path: string, body: object) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method: 'PATCH',
+    headers: sbHeaders({ 'Prefer': 'return=representation' }),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Supabase PATCH failed (${res.status}): ${await res.text()}`);
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
+}
+
+async function sbDelete(path: string) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method: 'DELETE',
+    headers: sbHeaders(),
+  });
+  if (!res.ok) throw new Error(`Supabase DELETE failed (${res.status}): ${await res.text()}`);
+  return true;
+}
 
 // Routes that still go through n8n (they involve GPT calls we want to keep there)
 const N8N_ROUTES: Record<string, string | undefined> = {
@@ -37,10 +85,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // LIST PROMPTS — used by the reference dropdown
     if (action === 'list-prompts') {
-      const data = await supabaseGet(
+      const data = await sbGet(
         'web_image_analysis?select=id,prompt_name,brand_name&order=prompt_name.asc'
       );
-      // Return array directly (same shape the frontend expects)
       return res.status(200).json(Array.isArray(data) ? data : []);
     }
 
@@ -71,7 +118,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         negative_prompt: negative_prompt || null,
       };
 
-      const data = await supabasePost(
+      const data = await sbPost(
         'web_image_analysis',
         row,
         { 'Prefer': 'return=representation' }
@@ -84,7 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (action === 'remove-reference') {
       const { recordId } = req.body;
       if (!recordId) return res.status(400).json({ error: 'recordId is required' });
-      await supabaseDelete(`web_image_analysis?id=eq.${recordId}`);
+      await sbDelete(`web_image_analysis?id=eq.${recordId}`);
       return res.status(200).json({ success: true });
     }
 
@@ -92,7 +139,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (action === 'rename-reference') {
       const { recordId, newName } = req.body;
       if (!recordId || !newName) return res.status(400).json({ error: 'recordId and newName are required' });
-      const data = await supabasePatch(
+      const data = await sbPatch(
         `web_image_analysis?id=eq.${recordId}`,
         { prompt_name: newName }
       );
