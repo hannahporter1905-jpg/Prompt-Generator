@@ -1,5 +1,6 @@
 import { Heart, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabaseThumbnail } from '@/lib/imageUtils';
 
 interface LikedImageCardProps {
   imgUrl: string;
@@ -13,7 +14,7 @@ export function LikedImageCard({ imgUrl, recordId, onView, onDownload, onUnlike 
   return (
     <div className="relative group w-full aspect-square rounded-xl overflow-hidden border border-border/60 shadow-sm">
       <img
-        src={imgUrl}
+        src={supabaseThumbnail(imgUrl, 400)}
         alt={recordId}
         className="w-full h-full object-cover cursor-pointer"
         loading="lazy"

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { HtmlConversionModal } from '@/components/HtmlConversionModal';
+import { supabaseThumbnail } from '@/lib/imageUtils';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -358,7 +359,7 @@ function ImageCard({
       {!loaded && <div className="absolute inset-0 bg-muted/60 animate-pulse rounded-2xl" />}
 
       <img
-        src={image.public_url}
+        src={supabaseThumbnail(image.public_url, 400)}
         alt={image.filename}
         loading="lazy"
         className={`w-full h-full object-cover rounded-2xl transition-transform duration-300 group-hover:scale-[1.03] ${loaded ? 'opacity-100' : 'opacity-0'}`}
