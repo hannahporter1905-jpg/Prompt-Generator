@@ -744,6 +744,7 @@ function ImageCard({
   priority?: boolean;
 }) {
   const [loaded,        setLoaded]        = useState(false);
+  const [errored,       setErrored]       = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting,    setIsDeleting]    = useState(false);
   const showBadge = isSupabaseImage(image.public_url);
@@ -769,18 +770,28 @@ function ImageCard({
       onClick={!confirmDelete ? onClick : undefined}
     >
       {/* Skeleton */}
-      {!loaded && <div className="absolute inset-0 bg-muted/60 animate-pulse rounded-2xl" />}
+      {!loaded && !errored && <div className="absolute inset-0 bg-muted/60 animate-pulse rounded-2xl" />}
 
-      <img
-        src={image.public_url}
-        alt={image.filename}
-        loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
-        fetchPriority={priority ? 'high' : 'low'}
-        className={`w-full h-full object-cover rounded-2xl transition-all duration-300 group-hover:scale-[1.03] ${loaded ? 'opacity-100' : 'opacity-0'}`}
-        onLoad={() => setLoaded(true)}
-        onError={() => setLoaded(true)}
-      />
+      {/* Broken image placeholder */}
+      {errored && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/30 rounded-2xl text-muted-foreground/40">
+          <Images className="w-8 h-8 mb-1" />
+          <p className="text-[10px]">Failed to load</p>
+        </div>
+      )}
+
+      {!errored && (
+        <img
+          src={image.public_url}
+          alt={image.filename || 'image'}
+          loading={priority ? 'eager' : 'lazy'}
+          decoding="async"
+          fetchPriority={priority ? 'high' : 'low'}
+          className={`w-full h-full object-cover rounded-2xl transition-all duration-300 group-hover:scale-[1.03] ${loaded ? 'opacity-100' : 'opacity-0'}`}
+          onLoad={() => setLoaded(true)}
+          onError={() => { setErrored(true); setLoaded(true); }}
+        />
+      )}
 
       {/* Brand badge for favorites */}
       {loaded && image._isFavorite && !confirmDelete && (
