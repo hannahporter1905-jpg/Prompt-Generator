@@ -95,37 +95,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (field === 'subject') {
         systemPrompt = `You are a costume designer for casino brand imagery.
 
-Your job is to give the existing character a COMPLETELY NEW LOOK that fits the theme —
-but the character must still be instantly recognizable as a ${brand} branded image.
+Your job is to ADD THEME-APPROPRIATE elements to the existing character —
+but the character's BASE OUTFIT and IDENTITY must remain recognizable.
 
-LOCKED — never change these:
-- The character's face, build, and body proportions
-- The species (rooster stays rooster)
+ABSOLUTELY LOCKED — never change these:
+- The character's face, build, body proportions, and species
+- The BASE OUTFIT TYPE (spacesuit stays spacesuit, suit stays suit, jersey stays jersey, armor stays armor)
+- The BASE COLOR SCHEME of the outfit (black suit stays predominantly black, white spacesuit stays predominantly white)
 - The number of characters (1 stays 1, 2 stays 2 — never add or remove)
 - The framing/composition (close-up stays close-up)
-- Core brand identity — the character must still feel like it belongs to ${brand}
+- Core brand identity and style — the character must still feel like it belongs to ${brand}
 
-MUST CHANGE — make these dramatically different:
-- Full outfit/costume (not just adding one small item — replace the whole look)
-- Multiple accessories (hat, glasses, jewelry, props — go all in)
-- Color palette of the clothing
-- Props they are holding or interacting with
-- Decorative elements around them
+WHAT YOU CAN ADD (theme elements layered ON TOP of the existing outfit):
+- Theme-appropriate accessories (Santa hat, holly pin, festive gloves, etc.)
+- Small decorative details on the existing outfit (snowflake patches, ornament pins, festive trim)
+- Props they are holding or interacting with (gift box, champagne glass, etc.)
+- Decorative elements around them (confetti, snow particles, sparkles)
 
-Think: same face, same build, completely different outfit.
+WHAT YOU MUST NOT DO:
+- Do NOT replace the entire outfit (astronaut in spacesuit must NOT become astronaut in Santa suit)
+- Do NOT change the base color of the outfit (black suit must NOT become green/red suit)
+- Do NOT remove the character's signature gear (helmet, sunglasses, weapon, etc.)
+- Think: SAME outfit with theme ACCESSORIES added, not a costume change
+
+Example: "Christmas theme" on an astronaut in a spacesuit = spacesuit with Santa hat on the helmet, red & green LED patches, candy cane stripes on the visor, holding a gift box — NOT an elf costume.
+Example: "Christmas theme" on a lion in a black suit = same black suit with a red velvet pocket square, holly pin, Santa hat, gold bells on lapel — NOT a green Christmas sweater.
 
 Preserve ALL stylistic and rendering descriptors: if the original says "anthropomorphic", "3D rendered", "stylized", "ultra-detailed" — these MUST appear in your output.
 
-If an OVERALL CREATIVE DIRECTION is provided, apply it as the full costume theme while keeping brand identity.
-If a field-level INSTRUCTION is provided, it overrides everything else.
+If a field-level INSTRUCTION is provided, it overrides all rules above.
 
 IMPORTANT: Return ONLY the restyled subject description as plain text. No labels, no prefixes.
 ${brandColorRule}`;
 
         if (instruction) {
-          userPrompt = `Brand: ${brand}\n\nINSTRUCTION (follow this precisely): ${instruction}\nRestyle the subject's clothing based on this instruction. Keep everything else identical.\n\nOriginal Subject:\n${subject}`;
+          userPrompt = `Brand: ${brand}\n\nINSTRUCTION (follow this precisely — this overrides all other rules): ${instruction}\nModify the subject based on this instruction.\n\nOriginal Subject:\n${subject}`;
         } else if (globalInstruction) {
-          userPrompt = `Brand: ${brand}\n\nTHEME TO APPLY TO OUTFIT ONLY: ${globalInstruction}\n\nOriginal Subject — change ONLY outfit/costume elements to match the theme, keep everything else word-for-word:\n${subject}`;
+          userPrompt = `Brand: ${brand}\n\nTHEME: ${globalInstruction}\n\nAdd theme-appropriate ACCESSORIES and DECORATIVE ELEMENTS to this subject. Keep the base outfit, base colors, and signature gear EXACTLY as described. Only layer theme elements on top.\n\nOriginal Subject (preserve the base outfit and colors):\n${subject}`;
         } else {
           userPrompt = `Brand: ${brand}\n\nReturn this subject description exactly as written, no changes:\n${subject}`;
         }
