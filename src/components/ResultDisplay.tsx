@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Archive, Check, Copy, Loader2, Pencil, Sparkles, RotateCcw, Bot, Gem, Save, X, Heart } from "lucide-react";
+import { Archive, Check, Copy, Loader2, Pencil, Sparkles, RotateCcw, Bot, Gem, Save, X, Heart, Shuffle } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { FavoriteHeart } from "./FavoriteHeart";
 import type { AppState, PromptMetadata, ReferencePromptData } from "@/types/prompt";
@@ -938,6 +938,47 @@ export function ResultDisplay({
                 </div>
               ));
             })()}
+            {/* Variation thumbnails — shown after main images when variations have been generated */}
+            {persistedVariations.length > 0 && (() => {
+              const originalCount = generatedImages.chatgpt.length + generatedImages.gemini.length;
+              return (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Shuffle className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Variations ({persistedVariations.length})
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 md:grid-cols-4">
+                    {persistedVariations.map((v, i) => (
+                      <div
+                        key={v.imageId}
+                        className="relative group cursor-pointer aspect-square"
+                        onClick={() => setModalImage({ initialIndex: originalCount + i })}
+                      >
+                        <div className="absolute inset-0 bg-primary/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
+                          <span className="text-primary-foreground bg-primary/80 px-2 py-1 rounded text-xs font-medium">View</span>
+                        </div>
+                        {/* Mode badge (top-left) */}
+                        <span className={`absolute top-1 left-1 z-10 text-[8px] rounded px-1 py-0.5 leading-none font-semibold ${v.variationMode === 'subtle' ? 'bg-sky-500/80 text-white' : 'bg-violet-500/80 text-white'}`}>
+                          {v.variationMode === 'subtle' ? 'SUB' : 'STR'}
+                        </span>
+                        {/* Variation number badge (bottom-left) */}
+                        <span className="absolute bottom-1 left-1 z-10 text-[9px] bg-primary/80 text-white rounded px-1 py-0.5 leading-none">
+                          V{v.variationIndex}
+                        </span>
+                        <img
+                          src={v.displayUrl}
+                          alt={`Variation ${v.variationIndex} (${v.variationMode})`}
+                          className="w-full h-full object-cover rounded-lg border border-border shadow-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Add Favorites button at the bottom right of the generated images section */}
             <div className="flex justify-end mt-4">
               <Button type="button" variant="outline" onClick={onOpenFavorites} className="gap-2 h-10">

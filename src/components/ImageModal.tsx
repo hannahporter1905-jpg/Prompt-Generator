@@ -232,11 +232,14 @@ export function ImageModal({
       }));
 
       setGeneratedVariations(urls);
-      // Replace (not append) so re-generating always shows fresh variations at same positions
-      setLocalVariations(newVarImages);
-      setVarGalleryStartIdx(startIdx);
-      // Navigate to first variation in gallery strip
-      setActiveIdx(startIdx);
+      // Keep variations of the OTHER type — only replace same-type variations
+      const existingOtherType = localVariations.filter(v => v.variationMode !== variationType);
+      const newAll = [...existingOtherType, ...newVarImages];
+      setLocalVariations(newAll);
+      // Navigate to the first of the newly generated variations
+      const newBatchStart = allImages!.length + existingOtherType.length;
+      setVarGalleryStartIdx(newBatchStart);
+      setActiveIdx(newBatchStart);
     } catch (err) {
       setVariationError(err instanceof Error ? err.message : 'Failed to generate variations');
     } finally {
