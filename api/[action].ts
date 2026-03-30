@@ -477,25 +477,55 @@ ${globalInstruction ? `COLOR OVERRIDE: Adapt ALL colors in lighting and mood to 
       return res.status(200).json({ success: true });
     }
 
-    // ── GENERATE VARIATIONS — proxies to Cloud Run /generate-variations ───────
+    // ── GENERATE VARIATIONS — calls /edit-image twice in parallel ────────────
+    // Uses the existing Cloud Run /edit-image endpoint (no dedicated /generate-variations needed)
     if (action === 'generate-variations') {
-      const { imageUrl, mode = 'subtle', guidance = '', count = 2, resolution = '1K' } = req.body;
+      const { imageUrl, mode = 'subtle', guidance = '', resolution = '1K' } = req.body;
       if (!imageUrl) return res.status(400).json({ error: 'imageUrl is required' });
-      if (!['subtle', 'strong'].includes(mode)) return res.status(400).json({ error: "mode must be 'subtle' or 'strong'" });
+
+      // Build the edit instruction from the mode + optional user guidance
+      const baseInstruction = mode === 'subtle'
+        ? 'Create a subtle variation: keep the exact same composition, subject, outfit, and overall structure. Make slight adjustments only to lighting warmth, color tones, and minor atmospheric details. Stay very close to the original.'
+        : 'Create a strong creative variation: keep the same main subject and outfit but dramatically reimagine the background environment, lighting color, overall palette, and mood. Make it feel distinctly different while preserving the core subject identity.';
+      const editInstructions = guidance
+        ? `${baseInstruction} Additional guidance: ${guidance}`
+        : baseInstruction;
+
       const baseUrl = process.env.GCP_CLOUD_RUN_URL || process.env.CLOUD_RUN_URL || 'https://image-generator-69452143295.us-central1.run.app';
       const idToken = await getCloudRunIdToken(baseUrl, req);
-      const crRes = await fetch(`${baseUrl}/generate-variations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-        body: JSON.stringify({ imageUrl, mode, guidance, count, resolution }),
-      });
-      if (!crRes.ok) {
-        const errText = await crRes.text();
-        console.error('Cloud Run generate-variations error:', crRes.status, errText);
-        return res.status(crRes.status).json({ error: 'Failed to generate variations', details: errText });
+
+      // Fire both requests simultaneously
+      const [r1, r2] = await Promise.allSettled([
+        fetch(`${baseUrl}/edit-image`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+          body: JSON.stringify({ imageUrl, editInstructions, resolution }),
+        }),
+        fetch(`${baseUrl}/edit-image`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+          body: JSON.stringify({ imageUrl, editInstructions, resolution }),
+        }),
+      ]);
+
+      const variations: { imageUrl: string }[] = [];
+      for (const r of [r1, r2]) {
+        if (r.status === 'fulfilled' && r.value.ok) {
+          const d = await r.value.json();
+          const rd = Array.isArray(d) ? d[0] : d;
+          // edit-image Cloud Run returns public_url (Supabase) or thumbnailUrl/imageUrl (Drive)
+          const url = rd.public_url || rd.thumbnailUrl || rd.imageUrl || rd.thumbnailLink || rd.webContentLink;
+          if (url) variations.push({ imageUrl: url });
+        } else if (r.status === 'fulfilled') {
+          const errText = await r.value.text();
+          console.error('Variation request failed:', r.value.status, errText);
+        }
       }
-      const data = await crRes.json();
-      return res.status(200).json(data);
+
+      if (variations.length === 0) {
+        return res.status(500).json({ error: 'Failed to generate variations — both attempts failed' });
+      }
+      return res.status(200).json({ variations });
     }
 
     return res.status(404).json({ error: `Unknown API route: ${action}` });
