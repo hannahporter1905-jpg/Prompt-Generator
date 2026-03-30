@@ -189,7 +189,11 @@ export function useSportsBannerWizard() {
       case 1: return !!wizardData.action; // role optional, action required
       case 2: return !!wizardData.subjectPosition;
       case 3: return true; // everything on background is optional
-      case 4: return !!wizardData.bannerSizeId && !!wizardData.occasion;
+      case 4: {
+        const sizeOk = !!wizardData.bannerSizeId;
+        const occasionOk = !!wizardData.occasion && (wizardData.occasion !== 'custom' || !!wizardData.occasionMood);
+        return sizeOk && occasionOk;
+      }
       default: return false;
     }
   }, [step, wizardData]);
@@ -207,7 +211,11 @@ export function useSportsBannerWizard() {
       reference: `Sports Banner (${wizardData.sport})`,
       subjectPosition: wizardData.subjectPosition,
       aspectRatio: wizardData.aspectRatio,
-      theme: `${wizardData.sport} sports banner — ${wizardData.occasion.replace(/-/g, ' ')}`,
+      theme: `${wizardData.sport} sports banner — ${
+        wizardData.occasion === 'custom'
+          ? wizardData.occasionMood
+          : wizardData.occasion.replace(/-/g, ' ')
+      }`,
       description: '',
       format_layout: wizardData.bannerSizeLabel
         ? `${wizardData.bannerSizeLabel} (${wizardData.bannerDimensions}), ${wizardData.negativeSpaceRule}`

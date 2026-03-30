@@ -1,61 +1,86 @@
 /**
- * BackgroundSelect — Q4: What kind of background?
- * Category chips → detail sub-chips.
- * Also collects: match country/city, flag in background, lighting tone, and optional props.
+ * BackgroundSelect — Q4: Background & lighting.
+ *
+ * Sections:
+ *  - Background type + detail
+ *  - Match country / city
+ *  - Flag in background
+ *  - Lighting tone (auto-filled from brand, overridable, with Custom free-text)
+ *  - Optional props (trophy, scoreboard, equipment)
+ *
+ * Every chip section has a "Custom" escape hatch so the user is never restricted.
  */
 import { useState } from 'react';
-import { BACKGROUND_CATEGORIES, TOP_MATCH_COUNTRIES, LIGHTING_TONES, BackgroundCategory } from './scene-presets';
+import {
+  BACKGROUND_CATEGORIES,
+  TOP_MATCH_COUNTRIES,
+  LIGHTING_TONES,
+  BRAND_LIGHTING_DEFAULTS,
+  BackgroundCategory,
+} from './scene-presets';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { SportsBannerData } from '@/types/prompt';
 
+type ChangeFn = (
+  field: keyof Pick<
+    SportsBannerData,
+    | 'backgroundCategory' | 'backgroundDetail'
+    | 'matchCountry' | 'flagInBackground' | 'flagCountry'
+    | 'lightingTone' | 'lightingToneDetail'
+    | 'hasTrophy' | 'hasScoreboard' | 'scoreboardText' | 'hasEquipment'
+  >,
+  value: string | boolean
+) => void;
+
 type Props = {
   sport: string;
+  /** Active brand — used to show which lighting was auto-filled */
+  brand: string;
   backgroundCategory: string;
   backgroundDetail: string;
   matchCountry: string;
   flagInBackground: boolean;
   flagCountry: string;
   lightingTone: string;
+  lightingToneDetail: string;
   hasTrophy: boolean;
   hasScoreboard: boolean;
   scoreboardText: string;
   hasEquipment: boolean;
-  onChange: (
-    field: keyof Pick<
-      SportsBannerData,
-      | 'backgroundCategory' | 'backgroundDetail'
-      | 'matchCountry' | 'flagInBackground' | 'flagCountry'
-      | 'lightingTone' | 'lightingToneDetail'
-      | 'hasTrophy' | 'hasScoreboard' | 'scoreboardText' | 'hasEquipment'
-    >,
-    value: string | boolean
-  ) => void;
+  onChange: ChangeFn;
 };
 
 export function BackgroundSelect({
   sport,
+  brand,
   backgroundCategory,
   backgroundDetail,
   matchCountry,
   flagInBackground,
   flagCountry,
   lightingTone,
+  lightingToneDetail,
   hasTrophy,
   hasScoreboard,
   scoreboardText,
   hasEquipment,
   onChange,
 }: Props) {
-  const [customDetail, setCustomDetail] = useState('');
+  const [customBgText, setCustomBgText] = useState('');
   const [showCustomBg, setShowCustomBg] = useState(false);
   const [customCountry, setCustomCountry] = useState('');
   const [showCustomCountry, setShowCustomCountry] = useState(false);
 
+  // The lighting tone the brand defaults to
+  const brandDefaultLighting = BRAND_LIGHTING_DEFAULTS[brand] ?? '';
+
   const selectedCategory: BackgroundCategory | undefined = BACKGROUND_CATEGORIES.find(
     (c) => c.id === backgroundCategory
   );
+
+  // ── handlers ──
 
   const handleCategorySelect = (cat: BackgroundCategory) => {
     setShowCustomBg(false);
@@ -65,7 +90,7 @@ export function BackgroundSelect({
 
   const handleDetailSelect = (detail: string) => {
     setShowCustomBg(false);
-    setCustomDetail('');
+    setCustomBgText('');
     onChange('backgroundDetail', detail);
   };
 
@@ -73,14 +98,19 @@ export function BackgroundSelect({
     setShowCustomCountry(false);
     setCustomCountry('');
     onChange('matchCountry', name);
-    // Auto-set flagCountry to same country if flag toggle is on
     if (flagInBackground) onChange('flagCountry', name);
   };
 
   const handleLightingSelect = (id: string) => {
-    const tone = LIGHTING_TONES.find((t) => t.id === id);
-    onChange('lightingTone', id);
-    onChange('lightingToneDetail', tone?.promptDetail ?? '');
+    if (id === 'custom') {
+      // Keep existing detail text if already custom; just set the id
+      onChange('lightingTone', 'custom');
+      // Don't clear lightingToneDetail — user might be switching back
+    } else {
+      const tone = LIGHTING_TONES.find((t) => t.id === id);
+      onChange('lightingTone', id);
+      onChange('lightingToneDetail', tone?.promptDetail ?? '');
+    }
   };
 
   return (
@@ -98,23 +128,20 @@ export function BackgroundSelect({
               className={[
                 'flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-150',
                 'hover:border-primary/60 hover:bg-primary/5',
-                backgroundCategory === cat.id
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border bg-card',
+                backgroundCategory === cat.id ? 'border-primary bg-primary/10' : 'border-border bg-card',
               ].join(' ')}
             >
               <span className="text-xl">{cat.emoji}</span>
-              <span className="text-xs font-medium text-center leading-tight text-foreground">
-                {cat.label}
-              </span>
+              <span className="text-xs font-medium text-center leading-tight text-foreground">{cat.label}</span>
             </button>
           ))}
+          {/* Custom category */}
           <button
             type="button"
             onClick={() => {
               setShowCustomBg(true);
               onChange('backgroundCategory', 'custom');
-              onChange('backgroundDetail', customDetail);
+              onChange('backgroundDetail', customBgText);
             }}
             className={[
               'flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-150',
@@ -126,48 +153,53 @@ export function BackgroundSelect({
             <span className="text-xs font-medium text-center leading-tight text-foreground">Custom</span>
           </button>
         </div>
-      </div>
 
-      {/* Background detail sub-chips */}
-      {selectedCategory && !showCustomBg && (
-        <div className="space-y-2">
-          <Label className="text-sm font-semibold text-foreground">Background detail</Label>
-          <div className="flex flex-wrap gap-2">
-            {selectedCategory.details.map((detail) => (
+        {/* Detail sub-chips */}
+        {selectedCategory && !showCustomBg && (
+          <div className="space-y-2 mt-2">
+            <Label className="text-sm text-muted-foreground">Choose a detail:</Label>
+            <div className="flex flex-wrap gap-2">
+              {selectedCategory.details.map((detail) => (
+                <button
+                  key={detail}
+                  type="button"
+                  onClick={() => handleDetailSelect(detail)}
+                  className={[
+                    'px-3 py-1.5 rounded-full border text-sm transition-all duration-150',
+                    'hover:border-primary/60 hover:bg-primary/5',
+                    backgroundDetail === detail
+                      ? 'border-primary bg-primary/10 text-primary font-medium'
+                      : 'border-border bg-card text-muted-foreground',
+                  ].join(' ')}
+                >
+                  {detail}
+                </button>
+              ))}
+              {/* Custom detail option */}
               <button
-                key={detail}
                 type="button"
-                onClick={() => handleDetailSelect(detail)}
-                className={[
-                  'px-3 py-1.5 rounded-full border text-sm transition-all duration-150',
-                  'hover:border-primary/60 hover:bg-primary/5',
-                  backgroundDetail === detail
-                    ? 'border-primary bg-primary/10 text-primary font-medium'
-                    : 'border-border bg-card text-muted-foreground',
-                ].join(' ')}
+                onClick={() => setShowCustomBg(true)}
+                className="px-3 py-1.5 rounded-full border text-sm border-dashed border-border text-muted-foreground hover:border-primary/60 hover:text-foreground transition-all duration-150"
               >
-                {detail}
+                ✏️ Custom…
               </button>
-            ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {(showCustomBg || backgroundCategory === 'custom') && (
-        <div className="space-y-1.5">
-          <Label className="text-sm font-semibold text-foreground">Describe the background</Label>
+        {(showCustomBg || backgroundCategory === 'custom') && (
           <Input
-            placeholder="e.g. rain-soaked rooftop under a neon billboard at night…"
-            value={customDetail}
+            placeholder="Describe the background in your own words…"
+            value={customBgText}
             onChange={(e) => {
-              setCustomDetail(e.target.value);
+              setCustomBgText(e.target.value);
               onChange('backgroundDetail', e.target.value);
             }}
             autoFocus={showCustomBg}
             className="text-sm"
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ── Match country / city ── */}
       <div className="space-y-2">
@@ -175,8 +207,8 @@ export function BackgroundSelect({
           Match country / city{' '}
           <span className="font-normal text-muted-foreground">(optional)</span>
         </Label>
-        <p className="text-xs text-muted-foreground -mt-1">
-          Adds local landmarks, atmosphere, or architecture hints to the background.
+        <p className="text-xs text-muted-foreground">
+          Adds local atmosphere — landmarks, architecture, and colour identity.
         </p>
         <div className="flex flex-wrap gap-1.5">
           {TOP_MATCH_COUNTRIES.map((c) => (
@@ -192,8 +224,7 @@ export function BackgroundSelect({
                   : 'border-border bg-card text-muted-foreground',
               ].join(' ')}
             >
-              <span>{c.flag}</span>
-              <span>{c.name}</span>
+              <span>{c.flag}</span><span>{c.name}</span>
             </button>
           ))}
           <button
@@ -210,7 +241,7 @@ export function BackgroundSelect({
         </div>
         {showCustomCountry && (
           <Input
-            placeholder="Type country or city name…"
+            placeholder="Type any country or city…"
             value={customCountry}
             onChange={(e) => {
               setCustomCountry(e.target.value);
@@ -233,9 +264,7 @@ export function BackgroundSelect({
             checked={flagInBackground}
             onCheckedChange={(checked) => {
               onChange('flagInBackground', checked);
-              if (checked && !flagCountry && matchCountry) {
-                onChange('flagCountry', matchCountry);
-              }
+              if (checked && !flagCountry && matchCountry) onChange('flagCountry', matchCountry);
             }}
           />
         </div>
@@ -256,13 +285,12 @@ export function BackgroundSelect({
                       : 'border-border bg-card text-muted-foreground',
                   ].join(' ')}
                 >
-                  <span>{c.flag}</span>
-                  <span>{c.name}</span>
+                  <span>{c.flag}</span><span>{c.name}</span>
                 </button>
               ))}
             </div>
             <Input
-              placeholder="Or type a country…"
+              placeholder="Or type any country flag…"
               value={TOP_MATCH_COUNTRIES.some((c) => c.name === flagCountry) ? '' : flagCountry}
               onChange={(e) => onChange('flagCountry', e.target.value)}
               className="max-w-xs text-sm mt-1"
@@ -273,12 +301,16 @@ export function BackgroundSelect({
 
       {/* ── Lighting tone ── */}
       <div className="space-y-2">
-        <Label className="text-sm font-semibold text-foreground">
-          Lighting tone{' '}
-          <span className="font-normal text-muted-foreground">(optional)</span>
-        </Label>
-        <p className="text-xs text-muted-foreground -mt-1">
-          Sets the color mood of the whole image — often tied to the team or country's identity.
+        <div className="flex items-center gap-2">
+          <Label className="text-sm font-semibold text-foreground">Lighting tone</Label>
+          {lightingTone === brandDefaultLighting && brandDefaultLighting && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+              ✓ Auto from {brand}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Sets the overall color mood. Auto-configured from your brand — override freely.
         </p>
         <div className="flex flex-wrap gap-2">
           {LIGHTING_TONES.map((tone) => (
@@ -292,27 +324,44 @@ export function BackgroundSelect({
                 lightingTone === tone.id
                   ? 'border-primary bg-primary/10 text-primary font-medium'
                   : 'border-border bg-card text-muted-foreground',
+                // Subtle indicator on the brand default
+                tone.id === brandDefaultLighting && lightingTone !== tone.id
+                  ? 'border-primary/30'
+                  : '',
               ].join(' ')}
             >
               {tone.label}
+              {tone.id === brandDefaultLighting && (
+                <span className="ml-1 text-[10px] opacity-60">●</span>
+              )}
             </button>
           ))}
         </div>
+
+        {/* Custom lighting free-text input */}
+        {lightingTone === 'custom' && (
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Describe the exact lighting you want:</p>
+            <Input
+              placeholder="e.g. warm Moroccan sunset, blue-tinted floodlights with rim light…"
+              value={lightingToneDetail}
+              onChange={(e) => onChange('lightingToneDetail', e.target.value)}
+              className="text-sm"
+              autoFocus
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Optional props ── */}
       <div className="space-y-3 pt-1 border-t border-border">
-        <p className="text-sm font-semibold text-foreground pt-2">Optional props</p>
+        <p className="text-sm font-semibold text-foreground pt-2">Optional extras</p>
 
         <div className="flex items-center justify-between max-w-sm">
           <label htmlFor="toggle-trophy" className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
             <span>🏆</span> Add championship trophy
           </label>
-          <Switch
-            id="toggle-trophy"
-            checked={hasTrophy}
-            onCheckedChange={(checked) => onChange('hasTrophy', checked)}
-          />
+          <Switch id="toggle-trophy" checked={hasTrophy} onCheckedChange={(v) => onChange('hasTrophy', v)} />
         </div>
 
         <div className="space-y-2">
@@ -320,31 +369,23 @@ export function BackgroundSelect({
             <label htmlFor="toggle-scoreboard" className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
               <span>📊</span> Add scoreboard
             </label>
-            <Switch
-              id="toggle-scoreboard"
-              checked={hasScoreboard}
-              onCheckedChange={(checked) => onChange('hasScoreboard', checked)}
-            />
+            <Switch id="toggle-scoreboard" checked={hasScoreboard} onCheckedChange={(v) => onChange('hasScoreboard', v)} />
           </div>
           {hasScoreboard && (
             <Input
-              placeholder='Score text e.g. "0 - 0" or "2 - 1"'
+              placeholder='Score text e.g. "0 - 0"'
               value={scoreboardText}
               onChange={(e) => onChange('scoreboardText', e.target.value)}
-              className="max-w-[200px] text-sm"
+              className="max-w-[180px] text-sm"
             />
           )}
         </div>
 
         <div className="flex items-center justify-between max-w-sm">
           <label htmlFor="toggle-equipment" className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-            <span>🎯</span> Add floating {sport.toLowerCase()} equipment
+            <span>🎯</span> Floating {sport.toLowerCase()} equipment
           </label>
-          <Switch
-            id="toggle-equipment"
-            checked={hasEquipment}
-            onCheckedChange={(checked) => onChange('hasEquipment', checked)}
-          />
+          <Switch id="toggle-equipment" checked={hasEquipment} onCheckedChange={(v) => onChange('hasEquipment', v)} />
         </div>
       </div>
 

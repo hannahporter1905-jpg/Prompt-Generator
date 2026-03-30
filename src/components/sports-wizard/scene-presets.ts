@@ -379,7 +379,44 @@ export const LIGHTING_TONES: LightingTone[] = [
     label: 'Stadium white',
     promptDetail: 'bright white stadium floodlights, clean sharp shadows, crisp professional lighting',
   },
+  {
+    id: 'custom',
+    label: 'Custom ✏️',
+    promptDetail: '', // user fills this in
+  },
 ];
+
+/**
+ * Maps each brand to the lighting tone that best matches its color palette.
+ * Auto-selected when the user picks a brand — they can always override.
+ */
+export const BRAND_LIGHTING_DEFAULTS: Record<string, string> = {
+  FortunePlay: 'orange',    // gold, amber, warm
+  SpinJo:      'purple',    // violet, neon-blue, electric cyan
+  Roosterbet:  'red',       // red, crimson, fiery
+  LuckyVibe:   'golden',    // golden hour, sunset, tropical warm
+  SpinsUp:     'purple',    // neon purple, showman magic
+  PlayMojo:    'night',     // dark, moody, noir
+  Lucky7even:  'purple',    // deep purple gradient
+  NovaDreams:  'blue',      // cool space, cosmic blue
+  Rollero:     'red',       // crimson warrior, dark fire
+};
+
+/**
+ * Short human-readable description of why this lighting is recommended per brand.
+ * Shown as a contextual tip in the wizard.
+ */
+export const BRAND_LIGHTING_REASONS: Record<string, string> = {
+  FortunePlay: 'FortunePlay uses gold and warm amber — orange/warm lighting matches the brand identity.',
+  SpinJo:      'SpinJo is a sci-fi purple brand — purple/neon lighting fits the futuristic feel.',
+  Roosterbet:  'Roosterbet is built on red and crimson energy — red/crimson is the signature mood.',
+  LuckyVibe:   'LuckyVibe is a beach/sunset brand — golden hour lighting feels native.',
+  SpinsUp:     'SpinsUp is a magical circus brand — purple/neon gives the showman spark.',
+  PlayMojo:    'PlayMojo is a dark, noir brand — night/dark lighting suits the moody style.',
+  Lucky7even:  'Lucky7even uses deep purple gradients — purple/neon reinforces the identity.',
+  NovaDreams:  'NovaDreams is a cosmic space brand — cool blue lighting matches the atmosphere.',
+  Rollero:     'Rollero is a warrior/gladiator brand — red/crimson lighting adds raw intensity.',
+};
 
 // ─────────────────────────────────────────────
 // Background categories
