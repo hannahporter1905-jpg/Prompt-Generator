@@ -1,6 +1,36 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Inline OpenAI helper to avoid cross-file import issues on Vercel
+// ── Cloud Run auth helper (inline — avoids cross-file import issues on Vercel) ─
+async function getCloudRunIdToken(cloudRunUrl: string, req: VercelRequest): Promise<string> {
+  const workloadProvider = process.env.GCP_WORKLOAD_PROVIDER;
+  const serviceAccount   = process.env.GCP_SERVICE_ACCOUNT;
+  if (!workloadProvider || !serviceAccount) throw new Error('Missing GCP_WORKLOAD_PROVIDER or GCP_SERVICE_ACCOUNT');
+  const oidcToken = (req.headers['x-vercel-oidc-token'] as string | undefined) || process.env.VERCEL_OIDC_TOKEN;
+  if (!oidcToken) throw new Error('No Vercel OIDC token found.');
+  const stsRes = await fetch('https://sts.googleapis.com/v1/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
+      audience: `//iam.googleapis.com/${workloadProvider}`,
+      scope: 'https://www.googleapis.com/auth/cloud-platform',
+      requested_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+      subject_token_type: 'urn:ietf:params:oauth:token-type:jwt',
+      subject_token: oidcToken,
+    }),
+  });
+  if (!stsRes.ok) { const e = await stsRes.text(); throw new Error(`STS failed (${stsRes.status}): ${e}`); }
+  const { access_token: federatedToken } = await stsRes.json();
+  const idRes = await fetch(
+    `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${serviceAccount}:generateIdToken`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${federatedToken}` }, body: JSON.stringify({ audience: cloudRunUrl, includeEmail: true }) }
+  );
+  if (!idRes.ok) { const e = await idRes.text(); throw new Error(`generateIdToken failed (${idRes.status}): ${e}`); }
+  const { token } = await idRes.json();
+  return token;
+}
+
+// ── OpenAI helper ──────────────────────────────────────────────────────────────
 async function chatCompletion(opts: {
   systemPrompt: string; userPrompt: string; temperature?: number;
   model?: string; maxTokens?: number; imageUrl?: string;
@@ -445,6 +475,27 @@ ${globalInstruction ? `COLOR OVERRIDE: Adapt ALL colors in lighting and mood to 
       // 3. Delete the database row
       await sbDelete(`generated_images?id=eq.${id}`);
       return res.status(200).json({ success: true });
+    }
+
+    // ── GENERATE VARIATIONS — proxies to Cloud Run /generate-variations ───────
+    if (action === 'generate-variations') {
+      const { imageUrl, mode = 'subtle', guidance = '', count = 2, resolution = '1K' } = req.body;
+      if (!imageUrl) return res.status(400).json({ error: 'imageUrl is required' });
+      if (!['subtle', 'strong'].includes(mode)) return res.status(400).json({ error: "mode must be 'subtle' or 'strong'" });
+      const baseUrl = process.env.GCP_CLOUD_RUN_URL || process.env.CLOUD_RUN_URL || 'https://image-generator-69452143295.us-central1.run.app';
+      const idToken = await getCloudRunIdToken(baseUrl, req);
+      const crRes = await fetch(`${baseUrl}/generate-variations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+        body: JSON.stringify({ imageUrl, mode, guidance, count, resolution }),
+      });
+      if (!crRes.ok) {
+        const errText = await crRes.text();
+        console.error('Cloud Run generate-variations error:', crRes.status, errText);
+        return res.status(crRes.status).json({ error: 'Failed to generate variations', details: errText });
+      }
+      const data = await crRes.json();
+      return res.status(200).json(data);
     }
 
     return res.status(404).json({ error: `Unknown API route: ${action}` });
