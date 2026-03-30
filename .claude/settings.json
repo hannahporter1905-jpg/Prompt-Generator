@@ -13,5 +13,18 @@
       "Bash(ls *)",
       "Bash(mkdir *)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git add -A && git commit -m \"auto: Claude edit\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
   }
 }
