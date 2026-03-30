@@ -38,9 +38,16 @@ const Index = () => {
     handleSubmitWithData,
   } = usePromptGenerator();
 
-  // Track which top-level mode the user is in
-  // 'form' = normal prompt generator, 'wizard' = sports banner wizard
-  const [activeTab, setActiveTab] = useState<'form' | 'wizard'>('form');
+  // Track which top-level mode the user is in — persisted in localStorage so
+  // reloads and Image Library navigation (same tab) restore the last active tab
+  const [activeTab, setActiveTab] = useState<'form' | 'wizard'>(() => {
+    try { return (localStorage.getItem('pg_activeTab') as 'form' | 'wizard') || 'form'; }
+    catch { return 'form'; }
+  });
+  const handleTabChange = (tab: 'form' | 'wizard') => {
+    try { localStorage.setItem('pg_activeTab', tab); } catch { /* ignore */ }
+    setActiveTab(tab);
+  };
 
   const { referencePromptData, isLoadingReferenceData, fetchReferencePromptData, clearReferencePromptData } =
     useReferencePromptData();
@@ -135,7 +142,7 @@ const Index = () => {
           <div className="flex gap-1 p-1 rounded-xl bg-muted/50 border border-border mb-4">
             <button
               type="button"
-              onClick={() => setActiveTab('form')}
+              onClick={() => handleTabChange('form')}
               className={[
                 'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all duration-150',
                 activeTab === 'form'
@@ -148,7 +155,7 @@ const Index = () => {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('wizard')}
+              onClick={() => handleTabChange('wizard')}
               className={[
                 'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all duration-150',
                 activeTab === 'wizard'
@@ -165,52 +172,71 @@ const Index = () => {
         {/* Main Card */}
         <div className="bg-card rounded-xl sm:rounded-2xl border border-border shadow-lg overflow-hidden">
           <div className="p-4 sm:p-6 md:p-8">
-              {showError && <ErrorDisplay message={errorMessage} onGoBack={handleGoBack} />}
 
-              {showForm && !showError && activeTab === 'form' && (
-                <PromptForm
-                  formData={formData}
-                  errors={errors}
-                  referencePromptData={referencePromptData}
-                  isLoadingReferenceData={isLoadingReferenceData}
-                  onFieldChange={handleFieldChange}
-                  onReferenceChange={handleReferenceChange}
-                  onSubmit={handleSubmit}
-                  onClear={handleClearFormWithReference}
-                  onOpenFavorites={() => setShowLikedPanel(true)}
-                />
-              )}
-
-              {showForm && !showError && activeTab === 'wizard' && (
+              {/* ── Sports Banner Wizard ─────────────────────────────────────────
+                  Always rendered when wizard tab is active, regardless of appState.
+                  Switching back to Custom Prompt preserves form/result state intact. */}
+              {activeTab === 'wizard' && !showProcessing && (
                 <SportsBannerWizard
-                  onSubmit={(data) => handleSubmitWithData(data as Partial<FormData>)}
+                  onSubmit={(data) => {
+                    handleTabChange('form'); // switch to Custom Prompt tab to show the result
+                    handleSubmitWithData(data as Partial<FormData>);
+                  }}
                 />
               )}
 
-              {showProcessing && <ProcessingState elapsedTime={elapsedTime} />}
+              {/* ── Custom Prompt flow ───────────────────────────────────────────
+                  Hidden when wizard tab is active, but state is preserved in memory
+                  so switching back restores exactly where the user left off. */}
+              {activeTab === 'form' && (
+                <>
+                  {showError && <ErrorDisplay message={errorMessage} onGoBack={handleGoBack} />}
 
-              {showResult && (
-                <ResultDisplay
-                  prompt={generatedPrompt}
-                  metadata={promptMetadata}
-                  processingTime={processingTime}
-                  appState={appState}
-                  generatedImages={generatedImages}
-                  isRegeneratingPrompt={isRegeneratingPrompt}
-                  referencePromptData={referencePromptData}
-                  isLoadingReferenceData={isLoadingReferenceData}
-                  onReferenceChange={handleReferenceChange}
-                  onSave={handleSave}
-                  onDontSave={handleDontSave}
-                  onEditForm={handleEditForm}
-                  onGenerateAgain={handleGenerateAgain}
-                  onClearForm={handleClearFormWithReference}
-                  onPromptChange={handlePromptChange}
-                  onMetadataChange={handleMetadataChange}
-                  onAddGeneratedImage={handleAddGeneratedImage}
-                  onRemoveGeneratedImage={handleRemoveGeneratedImage}
-                  onOpenFavorites={() => setShowLikedPanel(true)}
-                />
+                  {showForm && !showError && (
+                    <PromptForm
+                      formData={formData}
+                      errors={errors}
+                      referencePromptData={referencePromptData}
+                      isLoadingReferenceData={isLoadingReferenceData}
+                      onFieldChange={handleFieldChange}
+                      onReferenceChange={handleReferenceChange}
+                      onSubmit={handleSubmit}
+                      onClear={handleClearFormWithReference}
+                      onOpenFavorites={() => setShowLikedPanel(true)}
+                    />
+                  )}
+
+                  {showProcessing && <ProcessingState elapsedTime={elapsedTime} />}
+
+                  {showResult && (
+                    <ResultDisplay
+                      prompt={generatedPrompt}
+                      metadata={promptMetadata}
+                      processingTime={processingTime}
+                      appState={appState}
+                      generatedImages={generatedImages}
+                      isRegeneratingPrompt={isRegeneratingPrompt}
+                      referencePromptData={referencePromptData}
+                      isLoadingReferenceData={isLoadingReferenceData}
+                      onReferenceChange={handleReferenceChange}
+                      onSave={handleSave}
+                      onDontSave={handleDontSave}
+                      onEditForm={handleEditForm}
+                      onGenerateAgain={handleGenerateAgain}
+                      onClearForm={handleClearFormWithReference}
+                      onPromptChange={handlePromptChange}
+                      onMetadataChange={handleMetadataChange}
+                      onAddGeneratedImage={handleAddGeneratedImage}
+                      onRemoveGeneratedImage={handleRemoveGeneratedImage}
+                      onOpenFavorites={() => setShowLikedPanel(true)}
+                    />
+                  )}
+                </>
+              )}
+
+              {/* Processing state spans both tabs — shown on top while generating */}
+              {showProcessing && activeTab === 'wizard' && (
+                <ProcessingState elapsedTime={elapsedTime} />
               )}
           </div>
         </div>
