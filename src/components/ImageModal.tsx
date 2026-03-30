@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Download, FileCode, Loader2, Wand2, Bot, Gem, Heart } from 'lucide-react';
+import { X, Download, FileCode, Loader2, Wand2, Bot, Gem, Heart, Shuffle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { HtmlConversionModal } from './HtmlConversionModal';
@@ -61,9 +61,22 @@ export function ImageModal({
   // Tracks the latest edited URL for the current image (so we can offer "Save Edited to Favorites")
   const [lastEditedUrl, setLastEditedUrl] = useState<string | null>(null);
 
+  // Variations state
+  const [showVariationsPanel, setShowVariationsPanel] = useState(false);
+  const [variationType, setVariationType] = useState<'subtle' | 'strong'>('subtle');
+  const [variationInstructions, setVariationInstructions] = useState('');
+  const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
+  const [variationError, setVariationError] = useState<string | null>(null);
+  const [generatedVariations, setGeneratedVariations] = useState<string[]>([]);
+  const [variationElapsed, setVariationElapsed] = useState(0);
+  const variationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => { if (isOpen) setActiveIdx(initialIndex); }, [isOpen, initialIndex]);
-  // Reset edit state when switching images
-  useEffect(() => { setLastEditedUrl(null); setEditInstructions(''); setEditError(null); }, [activeIdx]);
+  // Reset edit + variation state when switching images
+  useEffect(() => {
+    setLastEditedUrl(null); setEditInstructions(''); setEditError(null);
+    setGeneratedVariations([]); setVariationError(null); setVariationInstructions('');
+  }, [activeIdx]);
 
   const current: GalleryImage = isGallery
     ? { ...allImages[activeIdx], ...(updatedUrlsRef.current.get(allImages[activeIdx].imageId) ?? {}) }
@@ -129,8 +142,47 @@ export function ImageModal({
     } finally { setIsEditing(false); }
   };
 
+  const handleGenerateVariations = async () => {
+    const srcUrl = current.editUrl || current.displayUrl;
+    if (!srcUrl) return;
+    setIsGeneratingVariations(true);
+    setVariationError(null);
+    setGeneratedVariations([]);
+    setVariationElapsed(0);
+    variationIntervalRef.current = setInterval(() => setVariationElapsed(p => p + 1), 1000);
+    const baseInstruction = variationType === 'subtle'
+      ? 'Create a subtle variation: keep the exact same composition, subject, outfit, and overall structure, but make slight adjustments to lighting, color tones, and minor atmospheric details. Stay very close to the original.'
+      : 'Create a strong creative variation: keep the same main subject but reimagine the background, lighting, color palette, and mood dramatically. Make it feel distinctly different while preserving the core subject identity.';
+    const fullInstruction = variationInstructions.trim()
+      ? `${baseInstruction} Additional guidance: ${variationInstructions.trim()}`
+      : baseInstruction;
+    try {
+      const [r1, r2] = await Promise.allSettled([
+        fetch('/api/edit-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageUrl: srcUrl, editInstructions: fullInstruction, resolution }) }),
+        fetch('/api/edit-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageUrl: srcUrl, editInstructions: fullInstruction, resolution }) }),
+      ]);
+      const urls: string[] = [];
+      for (const r of [r1, r2]) {
+        if (r.status === 'fulfilled' && r.value.ok) {
+          const data = await r.value.json();
+          const rd = Array.isArray(data) ? data[0] : data;
+          const url = rd.thumbnailUrl || rd.imageUrl || rd.thumbnailLink || rd.webContentLink || rd.public_url;
+          if (url) urls.push(url);
+        }
+      }
+      if (urls.length === 0) throw new Error('No variations were generated. Please try again.');
+      setGeneratedVariations(urls);
+    } catch (err) {
+      setVariationError(err instanceof Error ? err.message : 'Failed to generate variations');
+    } finally {
+      setIsGeneratingVariations(false);
+      if (variationIntervalRef.current) { clearInterval(variationIntervalRef.current); variationIntervalRef.current = null; }
+    }
+  };
+
   const handleClose = () => {
     setEditInstructions(''); setEditError(null);
+    setGeneratedVariations([]); setVariationError(null); setVariationInstructions('');
     updatedUrlsRef.current.clear(); onClose();
   };
 
@@ -207,6 +259,80 @@ export function ImageModal({
             {lastEditedUrl && (
               <p className="text-xs text-emerald-600 font-medium">Edit applied! You can keep editing or save it to favorites.</p>
             )}
+
+            {/* Variations panel — shown when toggled */}
+            {showVariationsPanel && (
+              <div className="rounded-xl border border-primary/25 bg-primary/5 p-3 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Shuffle className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-xs font-semibold text-foreground">Generate Variations</span>
+                  </div>
+                  {/* Subtle / Strong toggle */}
+                  <div className="flex items-center gap-0.5 bg-background rounded-lg p-0.5 border border-border text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setVariationType('subtle')}
+                      className={`px-2.5 py-1 rounded-md font-medium transition-all ${variationType === 'subtle' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                    >Subtle</button>
+                    <button
+                      type="button"
+                      onClick={() => setVariationType('strong')}
+                      className={`px-2.5 py-1 rounded-md font-medium transition-all ${variationType === 'strong' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                    >Strong</button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  {variationType === 'subtle'
+                    ? 'Keeps the same composition, subject & structure — slight adjustments to lighting, colors & mood.'
+                    : 'Reimagines background, lighting & palette dramatically while keeping the core subject.'}
+                </p>
+                <Textarea
+                  placeholder="Optional: add extra guidance for the variation… e.g. 'Make it feel like night time'"
+                  value={variationInstructions}
+                  onChange={e => setVariationInstructions(e.target.value)}
+                  className="min-h-[60px] resize-none text-xs"
+                  disabled={isGeneratingVariations}
+                />
+                {variationError && <p className="text-destructive text-xs">{variationError}</p>}
+                {/* Results */}
+                {generatedVariations.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {generatedVariations.map((url, i) => (
+                      <div key={i} className="relative group rounded-lg overflow-hidden border border-border aspect-square bg-muted/30">
+                        <img src={url} alt={`Variation ${i + 1}`} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={async () => { try { const res = await fetch(url); const blob = await res.blob(); const a = document.createElement('a'); a.href = window.URL.createObjectURL(blob); a.download = `variation-${i + 1}-${Date.now()}.png`; document.body.appendChild(a); a.click(); document.body.removeChild(a); } catch { window.open(url, '_blank'); } }}
+                            className="p-1.5 rounded-lg bg-white/20 hover:bg-white/40 text-white transition-colors"
+                            title="Download"
+                          ><Download className="w-3 h-3" /></button>
+                          {brand && (
+                            <button
+                              onClick={async () => { try { await fetch('/api/like-img', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ record_id: `var-${Date.now()}-${i}`, img_url: url, brand_name: brand }) }); } catch { /* non-fatal */ } }}
+                              className="p-1.5 rounded-lg bg-white/20 hover:bg-rose-500/80 text-white transition-colors"
+                              title="Save to Favorites"
+                            ><Heart className="w-3 h-3" /></button>
+                          )}
+                        </div>
+                        <span className="absolute bottom-1 left-1 text-[9px] bg-black/60 text-white rounded px-1 py-0.5 leading-none">V{i + 1}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={handleGenerateVariations}
+                  disabled={isGeneratingVariations}
+                  className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isGeneratingVariations
+                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Generating 2 variations…</span><span className="tabular-nums text-primary-foreground/70">({variationElapsed}s)</span></>
+                    : <><Shuffle className="w-3.5 h-3.5" />{generatedVariations.length > 0 ? 'Regenerate Variations' : 'Generate 2 Variations'}</>}
+                </button>
+              </div>
+            )}
+
             <Textarea
               placeholder="Enter editing instructions (e.g., 'Make the character face forward', 'Zoom in on the subject')"
               value={editInstructions}
@@ -215,12 +341,25 @@ export function ImageModal({
               disabled={isEditing}
             />
             {editError && <p className="text-destructive text-sm">{editError}</p>}
-            <div className="flex items-center gap-2 justify-end">
+            <div className="flex items-center gap-2">
+              {/* Variations toggle button — left side */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowVariationsPanel(v => !v)}
+                className={`gap-1.5 text-xs shrink-0 ${showVariationsPanel ? 'border-primary/50 text-primary bg-primary/5' : ''}`}
+                title="Generate 2 more variations"
+              >
+                <Shuffle className="w-3.5 h-3.5" />
+                Variations
+              </Button>
+              <div className="flex-1" />
               <Button
                 onClick={handleEditImage}
                 disabled={isEditing || !editInstructions.trim()}
                 variant="outline"
-                className="gap-2 flex-1"
+                className="gap-2"
               >
                 {isEditing
                   ? <><Loader2 className="w-4 h-4 animate-spin" /><span className="tabular-nums">{elapsedTime}s</span></>

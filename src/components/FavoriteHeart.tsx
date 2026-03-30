@@ -35,7 +35,7 @@ export function FavoriteHeart({ imageId, liked, onToggle, className }: FavoriteH
       onKeyDown={handleKeyDown}
       aria-label={liked ? 'Remove from favorites' : 'Add to favorites'}
       className={cn(
-        'absolute z-20 p-1.5 rounded-full cursor-pointer',
+        'absolute z-20 p-1 rounded-full cursor-pointer',
         'transition-all duration-200 ease-out',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
         // Visibility: always visible when liked, fade in on group hover otherwise
@@ -52,7 +52,7 @@ export function FavoriteHeart({ imageId, liked, onToggle, className }: FavoriteH
     >
       <Heart
         className={cn(
-          'w-4 h-4 transition-all duration-200',
+          'w-3 h-3 transition-all duration-200',
           liked
             ? 'fill-red-500 text-red-500 drop-shadow-[0_0_4px_rgba(239,68,68,0.5)]'
             : 'fill-transparent text-foreground/80',

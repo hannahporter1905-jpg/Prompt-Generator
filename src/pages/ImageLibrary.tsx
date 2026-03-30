@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, Download, FileCode, Images, RefreshCw, Trash2, X,
-  ChevronLeft, ChevronRight, Sparkles, Wand2, Bot, Cpu, Loader2, Plus, Save, Heart,
+  ChevronLeft, ChevronRight, Sparkles, Wand2, Bot, Cpu, Loader2, Plus, Save, Heart, Shuffle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -384,13 +384,26 @@ function Lightbox({
   const [showSaveModal,    setShowSaveModal]    = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Reset edit state on image change
+  // Variations state
+  const [showVariationsPanel, setShowVariationsPanel] = useState(false);
+  const [variationType,       setVariationType]       = useState<'subtle' | 'strong'>('subtle');
+  const [variationInstructions, setVariationInstructions] = useState('');
+  const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
+  const [variationError,      setVariationError]      = useState<string | null>(null);
+  const [generatedVariations, setGeneratedVariations] = useState<string[]>([]);
+  const [variationElapsed,    setVariationElapsed]    = useState(0);
+  const variationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Reset edit + variation state on image change
   useEffect(() => {
     setEditInstructions('');
     setEditError(null);
     setEditedImgUrl(null);
     setElapsedTime(0);
     setShowSaveModal(false);
+    setGeneratedVariations([]);
+    setVariationError(null);
+    setVariationInstructions('');
   }, [image.id]);
 
   // Timer while editing
@@ -462,6 +475,44 @@ function Lightbox({
       setEditError(err instanceof Error ? err.message : 'Failed to edit image');
     } finally {
       setIsEditing(false);
+    }
+  };
+
+  const handleGenerateVariations = async () => {
+    const srcUrl = editedImgUrl || image.public_url;
+    if (!srcUrl) return;
+    setIsGeneratingVariations(true);
+    setVariationError(null);
+    setGeneratedVariations([]);
+    setVariationElapsed(0);
+    variationIntervalRef.current = setInterval(() => setVariationElapsed(p => p + 1), 1000);
+    const baseInstruction = variationType === 'subtle'
+      ? 'Create a subtle variation: keep the exact same composition, subject, outfit, and overall structure, but make slight adjustments to lighting, color tones, and minor atmospheric details. Stay very close to the original.'
+      : 'Create a strong creative variation: keep the same main subject but reimagine the background, lighting, color palette, and mood dramatically. Make it feel distinctly different while preserving the core subject identity.';
+    const fullInstruction = variationInstructions.trim()
+      ? `${baseInstruction} Additional guidance: ${variationInstructions.trim()}`
+      : baseInstruction;
+    try {
+      const [r1, r2] = await Promise.allSettled([
+        fetch('/api/edit-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageUrl: srcUrl, editInstructions: fullInstruction, resolution: '1K' }) }),
+        fetch('/api/edit-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageUrl: srcUrl, editInstructions: fullInstruction, resolution: '1K' }) }),
+      ]);
+      const urls: string[] = [];
+      for (const r of [r1, r2]) {
+        if (r.status === 'fulfilled' && r.value.ok) {
+          const data = await r.value.json();
+          const rd = Array.isArray(data) ? data[0] : data;
+          const url = rd.public_url || rd.thumbnailUrl || rd.imageUrl || rd.thumbnailLink || rd.webContentLink;
+          if (url) urls.push(url);
+        }
+      }
+      if (urls.length === 0) throw new Error('No variations were generated. Please try again.');
+      setGeneratedVariations(urls);
+    } catch (err) {
+      setVariationError(err instanceof Error ? err.message : 'Failed to generate variations');
+    } finally {
+      setIsGeneratingVariations(false);
+      if (variationIntervalRef.current) { clearInterval(variationIntervalRef.current); variationIntervalRef.current = null; }
     }
   };
 
@@ -662,6 +713,94 @@ function Lightbox({
 
               <p className="text-white/25 text-[10px] text-center">Ctrl+Enter to apply</p>
             </div>}
+
+            {/* ── Variations section (hidden for favorites) ── */}
+            {!image._isFavorite && (
+              <div className="px-5 py-4 border-t border-white/10 space-y-3">
+                {/* Section header + toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowVariationsPanel(v => !v)}
+                  className="flex items-center justify-between w-full group"
+                >
+                  <div className="flex items-center gap-2">
+                    <Shuffle className="w-3.5 h-3.5 text-primary/70" />
+                    <p className="text-[11px] font-semibold text-white/60 uppercase tracking-wider">Variations</p>
+                  </div>
+                  <span className="text-[10px] text-white/30 group-hover:text-white/50 transition-colors">
+                    {showVariationsPanel ? 'Hide ▲' : 'Show ▼'}
+                  </span>
+                </button>
+
+                {showVariationsPanel && (
+                  <div className="space-y-2.5">
+                    {/* Subtle / Strong toggle */}
+                    <div className="flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5 border border-white/10 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setVariationType('subtle')}
+                        className={`flex-1 py-1.5 rounded-md font-medium transition-all ${variationType === 'subtle' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-white/40 hover:text-white/70'}`}
+                      >Subtle</button>
+                      <button
+                        type="button"
+                        onClick={() => setVariationType('strong')}
+                        className={`flex-1 py-1.5 rounded-md font-medium transition-all ${variationType === 'strong' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-white/40 hover:text-white/70'}`}
+                      >Strong</button>
+                    </div>
+                    <p className="text-white/30 text-[10px] leading-relaxed">
+                      {variationType === 'subtle'
+                        ? 'Same composition & subject — slight lighting, color & mood adjustments.'
+                        : 'Same subject, reimagined background, lighting, palette & atmosphere.'}
+                    </p>
+
+                    {/* Optional instruction */}
+                    <Textarea
+                      placeholder="Optional extra guidance… e.g. 'make it night time'"
+                      value={variationInstructions}
+                      onChange={e => setVariationInstructions(e.target.value)}
+                      className="min-h-[64px] resize-none text-xs bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-white/20 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      disabled={isGeneratingVariations}
+                    />
+
+                    {variationError && (
+                      <p className="text-destructive text-xs bg-destructive/10 rounded-lg px-3 py-2">{variationError}</p>
+                    )}
+
+                    {/* Variation results */}
+                    {generatedVariations.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2">
+                        {generatedVariations.map((url, i) => (
+                          <div key={i} className="relative group rounded-xl overflow-hidden border border-white/10 aspect-square bg-zinc-800">
+                            <img src={url} alt={`Variation ${i + 1}`} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={async () => { try { const res = await fetch(url); const blob = await res.blob(); const a = document.createElement('a'); a.href = window.URL.createObjectURL(blob); a.download = `variation-${i + 1}-${Date.now()}.png`; document.body.appendChild(a); a.click(); document.body.removeChild(a); } catch { window.open(url, '_blank'); } }}
+                                className="p-1.5 rounded-lg bg-white/20 hover:bg-white/40 text-white transition-colors"
+                                title="Download"
+                              ><Download className="w-3 h-3" /></button>
+                            </div>
+                            <span className="absolute bottom-1 left-1 text-[9px] bg-black/60 text-white rounded px-1 py-0.5 leading-none">V{i + 1}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleGenerateVariations}
+                      disabled={isGeneratingVariations}
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-primary/12 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {isGeneratingVariations ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Generating…</span><span className="tabular-nums text-primary/60 ml-1">({variationElapsed}s)</span></>
+                      ) : (
+                        <><Shuffle className="w-3.5 h-3.5" />{generatedVariations.length > 0 ? 'Regenerate Variations' : 'Generate 2 Variations'}</>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Fixed bottom actions */}

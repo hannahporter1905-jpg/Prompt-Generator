@@ -32,7 +32,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       Rollero:     'Crimson red, dark charcoal grey, black, sharp white highlight. Warrior/combat palette. NEVER use pastel, neon, or soft warm tones.',
     };
 
+    // Brand scene mandates — specific visual elements that MUST always appear.
+    // These are Roosterbet, FortunePlay, and LuckyVibe signature style rules.
+    const BRAND_SCENE_MANDATES: Record<string, string> = {
+      Roosterbet:  'FIRE IS MANDATORY: The scene MUST contain fire — flames, embers, or a fiery glow — regardless of outfit, sport, or setting. This is the Roosterbet signature. If the base prompt has no fire, ADD it naturally to the background, floor, or atmosphere.',
+      FortunePlay: 'GOLD IS MANDATORY: The scene MUST include gold accents AND gold dust/particles — floating golden light, golden sparkles, or shimmering gold dust in the air. This is the FortunePlay signature. If the base prompt lacks these, ADD them to the atmosphere or lighting.',
+      LuckyVibe:   'BEACH/SUNSET IS MANDATORY: The scene MUST feature sunset lighting as the primary light source, AND sand must be visible somewhere in the frame (even if the setting is a stadium with grass, add sand at the edges or as a foreground element). Palm trees MUST appear in the background. This is the LuckyVibe signature. If the base prompt lacks these, ADD them naturally.',
+    };
+
     let brandColorRule = '';
+    let brandSceneMandate = '';
     if (body.brand) {
       const palette = BRAND_PALETTES[body.brand];
       if (palette) {
@@ -41,6 +50,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         // Unknown/new brand — preserve whatever colors are already in the reference prompt
         brandColorRule = `\n6) BRAND COLOR ENFORCEMENT\nThis is a ${body.brand} branded image. Preserve the same color palette as the Base prompt. Do NOT introduce colors not present in the original. Keep the brand's visual identity consistent.\n`;
+      }
+      // Apply scene mandate if this brand has one
+      const mandate = BRAND_SCENE_MANDATES[body.brand];
+      if (mandate) {
+        brandSceneMandate = `\n7) BRAND SCENE MANDATE (HIGHEST PRIORITY)\n${mandate}\nThis rule OVERRIDES everything else. The brand signature element MUST appear in the final output no matter what.\n`;
       }
     }
 
@@ -95,6 +109,7 @@ If Aspect Ratio is "default", do not add any --ar flag.
 Apply Theme and Description ONLY to background, environment, lighting, atmosphere, mood, and secondary elements. Do NOT change the main subject's identity, clothing, pose, or realism level.
 
 ${brandColorRule}
+${brandSceneMandate}
 6) MIDJOURNEY FLAG
 Append exactly ONE --ar flag at the very end ONLY if Aspect Ratio is not "default":
 1:2->--ar 1:2 | 9:16->--ar 9:16 | 3:4->--ar 3:4 | 4:5->--ar 4:5 | 1:1->--ar 1:1 | 4:3->--ar 4:3 | 3:2->--ar 3:2 | 16:9->--ar 16:9 | 2:1->--ar 2:1 | 21:9->--ar 21:9

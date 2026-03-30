@@ -121,6 +121,8 @@ const Index = () => {
           </p>
           <Link
             to="/library"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/25 hover:border-primary/50 text-primary font-medium text-sm transition-all duration-150 shadow-sm hover:shadow"
           >
             <Images className="w-4 h-4" />
