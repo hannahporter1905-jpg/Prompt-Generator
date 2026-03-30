@@ -18,6 +18,7 @@ import {
   BRAND_LIGHTING_DEFAULTS,
   BackgroundCategory,
 } from './scene-presets';
+import { getBackgroundSuggestion } from './prompt-intelligence';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -36,6 +37,8 @@ type ChangeFn = (
 
 type Props = {
   sport: string;
+  /** The action selected in Q2 — used to compute background suggestion */
+  action: string;
   /** Active brand — used to show which lighting was auto-filled */
   brand: string;
   backgroundCategory: string;
@@ -54,6 +57,7 @@ type Props = {
 
 export function BackgroundSelect({
   sport,
+  action,
   brand,
   backgroundCategory,
   backgroundDetail,
@@ -72,9 +76,14 @@ export function BackgroundSelect({
   const [showCustomBg, setShowCustomBg] = useState(false);
   const [customCountry, setCustomCountry] = useState('');
   const [showCustomCountry, setShowCustomCountry] = useState(false);
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
 
   // The lighting tone the brand defaults to
   const brandDefaultLighting = BRAND_LIGHTING_DEFAULTS[brand] ?? '';
+
+  // Smart suggestion based on the action selected in Q2
+  const suggestion = action ? getBackgroundSuggestion(action, sport) : null;
+  const showSuggestion = suggestion && !suggestionDismissed && !backgroundCategory;
 
   const selectedCategory: BackgroundCategory | undefined = BACKGROUND_CATEGORIES.find(
     (c) => c.id === backgroundCategory
@@ -113,8 +122,43 @@ export function BackgroundSelect({
     }
   };
 
+  const applySuggestion = () => {
+    if (!suggestion) return;
+    setSuggestionDismissed(true);
+    onChange('backgroundCategory', suggestion.category);
+    onChange('backgroundDetail', suggestion.detail);
+  };
+
   return (
     <div className="space-y-6">
+
+      {/* ── Smart suggestion card ── */}
+      {showSuggestion && suggestion && (
+        <div className="flex items-start gap-3 p-3 rounded-xl border border-primary/30 bg-primary/5">
+          <span className="text-lg shrink-0">✨</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground">Suggested for this scene</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{suggestion.reason}</p>
+            <p className="text-xs text-primary font-medium mt-1 truncate">{suggestion.detail}</p>
+          </div>
+          <div className="flex flex-col gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={applySuggestion}
+              className="px-3 py-1 text-xs rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+            >
+              Apply
+            </button>
+            <button
+              type="button"
+              onClick={() => setSuggestionDismissed(true)}
+              className="px-3 py-1 text-xs rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Background type ── */}
       <div className="space-y-2">

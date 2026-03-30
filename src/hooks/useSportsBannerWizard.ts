@@ -14,107 +14,10 @@
 
 import { useState, useCallback } from 'react';
 import { SportsBannerData, FormData } from '@/types/prompt';
-import { POSITION_GRID, PositionCell } from '@/components/sports-wizard/scene-presets';
-import { BRAND_PALETTES } from '@/lib/brand-colors';
+import { PositionCell } from '@/components/sports-wizard/scene-presets';
+import { buildNarrativePrompt, buildNegativePrompt, BRAND_KIT_DEFAULTS } from '@/components/sports-wizard/prompt-intelligence';
 
 export type { SportsBannerData };
-
-// ─────────────────────────────────────────────
-// Brand-specific kit color defaults
-// ─────────────────────────────────────────────
-const BRAND_KIT_DEFAULTS: Record<string, string> = {
-  FortunePlay: 'gold and black',
-  SpinJo: 'purple and white',
-  Roosterbet: 'red and black',
-  LuckyVibe: 'sunset orange and white',
-  SpinsUp: 'neon purple and black',
-  PlayMojo: 'white and red',
-  Lucky7even: 'purple and gold',
-  NovaDreams: 'white and blue',
-  Rollero: 'crimson and dark grey',
-};
-
-// ─────────────────────────────────────────────
-// Prompt assembly
-// ─────────────────────────────────────────────
-
-/**
- * Builds the full positive_prompt from all wizard answers.
- * Sent as the "Base prompt" to the generate-prompt API which then applies
- * position, aspect ratio, and brand color rules on top.
- */
-function buildPositivePrompt(data: SportsBannerData, brand: string): string {
-  const kitColors = data.kitColors || BRAND_KIT_DEFAULTS[brand] || 'branded team colors';
-
-  // ── Subject description ──
-  // Structure: "Two male Soccer athletes (Strikers) from Brazil"
-  // Role goes in parentheses AFTER the sport — avoids confusing the AI with
-  // role words appearing before the sport type (e.g. "Presenter Soccer athlete").
-  const countMap: Record<string, string> = { '1': 'A single', '2': 'Two', '3+': 'A team of' };
-  const countLabel = countMap[data.playerCount] ?? 'A';
-  const genderLabel = data.gender === 'Mixed' ? 'male and female' : data.gender.toLowerCase();
-  const playerWord = data.playerCount === '1' ? 'athlete' : 'athletes';
-  const roleStr = data.playerRole ? ` — ${data.playerRole} position` : '';
-  const nationalityStr = data.teamNationality ? `, from ${data.teamNationality}` : '';
-  const subjectDesc = `${countLabel} ${genderLabel} ${data.sport} ${playerWord}${roleStr}${nationalityStr}`;
-
-  // ── Background description ──
-  const bgParts: string[] = [];
-  if (data.backgroundDetail) bgParts.push(data.backgroundDetail);
-  else bgParts.push(`${data.sport} stadium`);
-  // Country/city atmosphere
-  if (data.matchCountry) {
-    bgParts.push(`with visual references to ${data.matchCountry} — local atmosphere, architecture, and colours`);
-  }
-  // Flag
-  if (data.flagInBackground && data.flagCountry) {
-    bgParts.push(`a large ${data.flagCountry} national flag prominently displayed in the background`);
-  }
-  // Props
-  if (data.hasTrophy) bgParts.push('a golden championship trophy prominently featured in the scene');
-  if (data.hasScoreboard) bgParts.push(`a scoreboard showing "${data.scoreboardText || '0 - 0'}"`);
-  if (data.hasEquipment) bgParts.push(`floating ${data.sport.toLowerCase()} equipment scattered in the frame`);
-  const bgDesc = bgParts.join(', ');
-
-  // ── Lighting ──
-  const lightingDesc = data.lightingToneDetail
-    || (data.backgroundCategory === 'minimal'
-      ? 'single spotlight, dramatic rim light, deep shadows'
-      : 'dynamic sports photography lighting, high contrast, cinematic');
-
-  // ── Composition ──
-  const positionCell = POSITION_GRID.find((c) => c.value === data.subjectPosition);
-  const negSpaceRule = positionCell?.negativeSpaceRule ?? 'balanced composition';
-
-  // ── Format ──
-  // IMPORTANT: Do NOT use the word "banner" here — it causes the AI to add
-  // borders, frames, and design layout elements to the image.
-  // Describe it as a photograph with a specific aspect ratio instead.
-  const aspectDesc = data.bannerDimensions
-    ? `${data.bannerDimensions} aspect ratio`
-    : 'wide 16:9 aspect ratio';
-
-  // ── Assemble ──
-  return [
-    `${subjectDesc}, ${data.action}, wearing ${kitColors} kit and matching ${data.sport.toLowerCase()} gear.`,
-    `Background: ${bgDesc}.`,
-    `Lighting: ${lightingDesc}.`,
-    `Mood: ${data.occasionMood || 'energetic, dynamic, high-impact'}.`,
-    `Composition: ${negSpaceRule}.`,
-    `Full-bleed edge-to-edge sports action photograph, ${aspectDesc}. No borders, no frames, no design overlays, no graphic elements, no UI.`,
-    'Ultra-realistic sports photography. Dynamic action shot. Cinematic quality. High contrast. Photorealistic.',
-  ].join(' ');
-}
-
-function buildNegativePrompt(brand: string): string {
-  const paletteStr = BRAND_PALETTES[brand] ?? '';
-  const neverMatch = paletteStr.match(/NEVER use ([^.]+)\./);
-  const forbiddenColors = neverMatch ? neverMatch[1] : '';
-  // Borders/frames are explicitly excluded because the word "banner" in the prompt
-  // would otherwise cause the AI to add design layout elements.
-  const base = 'border, frame, design overlay, graphic elements, UI elements, layout elements, white border, black border, rounded corners, vignette overlay, text, logos, watermarks, blurry, out of focus, cartoon, illustration, low quality, nsfw, brand logos, typography, words, lettering, signatures';
-  return forbiddenColors ? `${base}, ${forbiddenColors} colors` : base;
-}
 
 // ─────────────────────────────────────────────
 // Initial state
@@ -206,7 +109,7 @@ export function useSportsBannerWizard() {
   }, [step, wizardData]);
 
   const assembleFormData = useCallback((brand: string): Partial<FormData> => {
-    const positive_prompt = buildPositivePrompt(wizardData, brand);
+    const positive_prompt = buildNarrativePrompt(wizardData, brand);
     const negative_prompt = buildNegativePrompt(brand);
 
     const countLabel = wizardData.playerCount === '1' ? 'Single' : wizardData.playerCount === '2' ? 'Two' : 'Team of';

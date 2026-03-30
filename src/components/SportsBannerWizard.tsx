@@ -261,6 +261,7 @@ export function SportsBannerWizard({ onSubmit }: Props) {
         {step === 3 && (
           <BackgroundSelect
             sport={wizardData.sport}
+            action={wizardData.action}
             brand={brand}
             backgroundCategory={wizardData.backgroundCategory}
             backgroundDetail={wizardData.backgroundDetail}
