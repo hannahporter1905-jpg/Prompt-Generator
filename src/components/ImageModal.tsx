@@ -143,7 +143,7 @@ export function ImageModal({
   };
 
   const handleGenerateVariations = async () => {
-    const srcUrl = current.editUrl || current.displayUrl;
+    const srcUrl = current.displayUrl || current.editUrl;
     if (!srcUrl) return;
     setIsGeneratingVariations(true);
     setVariationError(null);

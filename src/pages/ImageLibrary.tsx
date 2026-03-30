@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, Download, FileCode, Images, RefreshCw, Trash2, X,
-  ChevronLeft, ChevronRight, Sparkles, Wand2, Bot, Cpu, Loader2, Plus, Save, Heart, Shuffle,
+  ChevronLeft, ChevronRight, Sparkles, Wand2, Bot, Cpu, Loader2, Plus, Save, Heart, Shuffle, Expand,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -773,6 +773,11 @@ function Lightbox({
                           <div key={i} className="relative group rounded-xl overflow-hidden border border-white/10 aspect-square bg-zinc-800">
                             <img src={url} alt={`Variation ${i + 1}`} className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => window.open(url, '_blank')}
+                                className="p-1.5 rounded-lg bg-white/20 hover:bg-white/40 text-white transition-colors"
+                                title="View full size"
+                              ><Expand className="w-3 h-3" /></button>
                               <button
                                 onClick={async () => { try { const res = await fetch(url); const blob = await res.blob(); const a = document.createElement('a'); a.href = window.URL.createObjectURL(blob); a.download = `variation-${i + 1}-${Date.now()}.png`; document.body.appendChild(a); a.click(); document.body.removeChild(a); } catch { window.open(url, '_blank'); } }}
                                 className="p-1.5 rounded-lg bg-white/20 hover:bg-white/40 text-white transition-colors"
