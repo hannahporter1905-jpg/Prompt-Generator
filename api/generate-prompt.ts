@@ -22,10 +22,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // To add a new brand, just add a key here. Everything else adapts automatically.
     const BRAND_PALETTES: Record<string, string> = {
       FortunePlay: 'Yellow, orange, gold, warm amber, warm casino lighting. NEVER use blue, purple, cyan, neon, or cold tones.',
-      SpinJo: 'Purple, violet, magenta, neon-blue, electric cyan, deep space black. Sci-fi/futuristic palette. NEVER use gold, warm amber, orange, or earthy warm tones.',
-      Roosterbet: 'Red, crimson, fiery orange, black, bold white. High-energy sports palette. NEVER use pastel, soft pink, or muted tones.',
-      LuckyVibe: 'Golden hour warm tones, sunset orange, tropical coral, soft amber, warm backlight. NEVER use cold blue, purple, or neon tones.',
-      SpinsUp: 'Neon purple, electric magenta, showman gold accents, deep black, circus-bright. Magical/mystical palette. NEVER use muted earthy tones or pastels.',
+      SpinJo:      'Purple, violet, magenta, neon-blue, electric cyan, deep space black. Sci-fi/futuristic palette. NEVER use gold, warm amber, orange, or earthy warm tones.',
+      Roosterbet:  'Red, crimson, fiery orange, black, bold white. High-energy sports palette. NEVER use pastel, soft pink, or muted tones.',
+      LuckyVibe:   'Golden hour warm tones, sunset orange, tropical coral, soft amber, warm backlight. NEVER use cold blue, purple, or neon tones.',
+      SpinsUp:     'Neon purple, electric magenta, showman gold accents, deep black, circus-bright. Magical/mystical palette. NEVER use muted earthy tones or pastels.',
+      PlayMojo:    'Dark noir black, bold white, sharp red accent. Sleek, cinematic. NEVER use warm gold, pastel, or cheerful bright colors.',
+      Lucky7even:  'Deep purple, electric violet, metallic gold accents, black. Rich premium palette. NEVER use flat grey, earthy tones, or muted colors.',
+      NovaDreams:  'Cosmic blue, electric cyan, white, deep navy black. Space/futuristic palette. NEVER use warm orange, red, gold, or earthy tones.',
+      Rollero:     'Crimson red, dark charcoal grey, black, sharp white highlight. Warrior/combat palette. NEVER use pastel, neon, or soft warm tones.',
     };
 
     let brandColorRule = '';
@@ -40,15 +44,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Build the EXACT same user message as the n8n "Message a model" node.
-    // In n8n this is the only message sent (no separate system prompt).
-    const userMessage = `You are an editing engine for image generation prompts.
+    // Build the user message sent to GPT.
+    // IMPORTANT: Only the positive_prompt is passed as the Base prompt.
+    // The negative_prompt must NEVER be concatenated into the Base prompt —
+    // GPT picks up the negative keywords (e.g. "anime", "cartoon") and
+    // hallucinates them into the output, producing stylized/non-photorealistic images.
+    const userMessage = `You are a precision editor for AI image generation prompts.
 
-Your job: Edit the Base prompt (final_ready) to comply with the provided Theme, Description, Main Subject Position, and Aspect Ratio.
+Your job: Make TARGETED edits to the Base prompt to apply the Subject Position, Aspect Ratio, Theme/Description, and Brand Color rules below. Do NOT rewrite or restructure the prompt.
 
 INPUTS
-Base prompt (final_ready):
-${(body.positive_prompt || '') + ' ' + (body.negative_prompt || '')}
+Base prompt:
+${body.positive_prompt || ''}
 
 Theme:
 ${body.theme || ''}
@@ -62,51 +69,38 @@ ${body.subjectPosition || ''}
 Aspect Ratio:
 ${body.aspectRatio || ''}
 
-RULES (follow in order)
+RULES (apply in order, make only the minimum changes needed)
 
-1) MAIN SUBJECT POSITION
+1) PRESERVE FORMAT
+Keep the exact narrative style of the Base prompt. Do NOT reformat it into labeled lists (Background: ... Lighting: ... Mood: ...). Keep it as flowing prose. Only change what the rules below require.
+
+2) MAIN SUBJECT POSITION
 If Main Subject Position is not "default", do ALL of the following:
-- DELETE every composition/placement/negative-space instruction from the Base prompt (examples: \u201Cpositioned on the right/left\u201D, \u201Cleft 55\u201360% negative space\u201D, \u201Cright third\u201D, \u201Ccenter-left\u201D, \u201Crule of thirds\u201D, \u201Cempty space on the left\u201D, etc.).
-- REPLACE it with ONE clear, explicit placement instruction that matches Main Subject Position EXACTLY.
-- Do NOT keep, paraphrase, or blend any previous placement instructions from the Base prompt.
+- DELETE every composition/placement/negative-space instruction from the Base prompt (e.g. "subject on left third", "right two-thirds clear", "subject centered", "balanced composition", etc.).
+- REPLACE with ONE placement instruction that matches Main Subject Position EXACTLY.
+If Main Subject Position is "default", keep the Base prompt's placement instructions unchanged.
 
-If Main Subject Position is "default", keep the Base prompt\u2019s placement instructions unchanged.
+3) NEGATIVE SPACE (only when Main Subject Position is left-aligned or right-aligned)
+- left-aligned → ensure clear negative space on the right
+- right-aligned → ensure clear negative space on the left
+Remove any conflicting negative-space wording.
 
-2) NEGATIVE SPACE (only when Main Subject Position is left-aligned or right-aligned, and not default)
-- left-aligned \u2192 ensure clear negative space on the right
-- right-aligned \u2192 ensure clear negative space on the left
-Remove any conflicting negative-space wording from the Base prompt.
-
-3) ASPECT RATIO OVERRIDE
+4) ASPECT RATIO OVERRIDE
 If Aspect Ratio is not "default":
-- DELETE any existing aspect ratio flags or aspect instructions from the Base prompt (including any --ar and any wording implying a specific banner/wide/square framing if it conflicts).
-- Adjust framing/cropping language so the composition suits the requested Aspect Ratio.
-If Aspect Ratio is "default", do not add any new --ar flag.
+- DELETE any existing --ar flags or aspect ratio wording from the Base prompt.
+- Adjust framing language to match the requested Aspect Ratio.
+If Aspect Ratio is "default", do not add any --ar flag.
 
-4) THEME + DESCRIPTION APPLICATION (background only)
-Apply Theme and Description ONLY to background, environment, lighting, atmosphere, mood, and secondary elements.
-They must NOT change the main subject\u2019s identity, expression, clothing, accessories/props, or realism level.
+5) THEME + DESCRIPTION (background only)
+Apply Theme and Description ONLY to background, environment, lighting, atmosphere, mood, and secondary elements. Do NOT change the main subject's identity, clothing, pose, or realism level.
 
-${brandColorRule}5) MIDJOURNEY FLAG
-Append exactly ONE --ar flag at the very end ONLY if Aspect Ratio is not "default", using this mapping:
-1:2 -> --ar 1:2
-6:11 -> --ar 6:11
-9:16 -> --ar 9:16
-2:3 -> --ar 2:3
-3:4 -> --ar 3:4
-4:5 -> --ar 4:5
-5:6 -> --ar 5:6
-1:1 -> --ar 1:1
-6:5 -> --ar 6:5
-5:4 -> --ar 5:4
-4:3 -> --ar 4:3
-3:2 -> --ar 3:2
-16:9 -> --ar 16:9
-2:1 -> --ar 2:1
-21:9 -> --ar 21:9
+${brandColorRule}
+6) MIDJOURNEY FLAG
+Append exactly ONE --ar flag at the very end ONLY if Aspect Ratio is not "default":
+1:2->--ar 1:2 | 9:16->--ar 9:16 | 3:4->--ar 3:4 | 4:5->--ar 4:5 | 1:1->--ar 1:1 | 4:3->--ar 4:3 | 3:2->--ar 3:2 | 16:9->--ar 16:9 | 2:1->--ar 2:1 | 21:9->--ar 21:9
 
 OUTPUT
-Return ONLY the final edited prompt text (and optional --ar flag). No explanations.`;
+Return ONLY the final edited prompt text. No explanations, no labels, no extra text.`;
 
     // Call OpenAI — n8n sends this as a single user message with no system prompt
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
