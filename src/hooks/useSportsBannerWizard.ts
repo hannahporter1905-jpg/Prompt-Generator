@@ -47,14 +47,16 @@ function buildPositivePrompt(data: SportsBannerData, brand: string): string {
   const kitColors = data.kitColors || BRAND_KIT_DEFAULTS[brand] || 'branded team colors';
 
   // ── Subject description ──
+  // Structure: "Two male Soccer athletes (Strikers) from Brazil"
+  // Role goes in parentheses AFTER the sport — avoids confusing the AI with
+  // role words appearing before the sport type (e.g. "Presenter Soccer athlete").
   const countMap: Record<string, string> = { '1': 'A single', '2': 'Two', '3+': 'A team of' };
   const countLabel = countMap[data.playerCount] ?? 'A';
   const genderLabel = data.gender === 'Mixed' ? 'male and female' : data.gender.toLowerCase();
   const playerWord = data.playerCount === '1' ? 'athlete' : 'athletes';
-  // Include role and nationality if provided
-  const roleStr = data.playerRole ? ` ${data.playerRole}` : '';
-  const nationalityStr = data.teamNationality ? ` (${data.teamNationality})` : '';
-  const subjectDesc = `${countLabel} ${genderLabel}${roleStr} ${data.sport} ${playerWord}${nationalityStr}`;
+  const roleStr = data.playerRole ? ` — ${data.playerRole} position` : '';
+  const nationalityStr = data.teamNationality ? `, from ${data.teamNationality}` : '';
+  const subjectDesc = `${countLabel} ${genderLabel} ${data.sport} ${playerWord}${roleStr}${nationalityStr}`;
 
   // ── Background description ──
   const bgParts: string[] = [];
@@ -85,9 +87,12 @@ function buildPositivePrompt(data: SportsBannerData, brand: string): string {
   const negSpaceRule = positionCell?.negativeSpaceRule ?? 'balanced composition';
 
   // ── Format ──
-  const sizeDesc = data.bannerSizeLabel
-    ? `${data.bannerSizeLabel} banner (${data.bannerDimensions})`
-    : 'wide banner';
+  // IMPORTANT: Do NOT use the word "banner" here — it causes the AI to add
+  // borders, frames, and design layout elements to the image.
+  // Describe it as a photograph with a specific aspect ratio instead.
+  const aspectDesc = data.bannerDimensions
+    ? `${data.bannerDimensions} aspect ratio`
+    : 'wide 16:9 aspect ratio';
 
   // ── Assemble ──
   return [
@@ -96,8 +101,8 @@ function buildPositivePrompt(data: SportsBannerData, brand: string): string {
     `Lighting: ${lightingDesc}.`,
     `Mood: ${data.occasionMood || 'energetic, dynamic, high-impact'}.`,
     `Composition: ${negSpaceRule}.`,
-    `Format: ${sizeDesc}, designed as a branded sports promotional banner.`,
-    'Ultra-realistic sports photography. Dynamic action shot. Professional sports advertising. High contrast. Photorealistic.',
+    `Full-bleed edge-to-edge sports action photograph, ${aspectDesc}. No borders, no frames, no design overlays, no graphic elements, no UI.`,
+    'Ultra-realistic sports photography. Dynamic action shot. Cinematic quality. High contrast. Photorealistic.',
   ].join(' ');
 }
 
@@ -105,7 +110,9 @@ function buildNegativePrompt(brand: string): string {
   const paletteStr = BRAND_PALETTES[brand] ?? '';
   const neverMatch = paletteStr.match(/NEVER use ([^.]+)\./);
   const forbiddenColors = neverMatch ? neverMatch[1] : '';
-  const base = 'text, logos, watermarks, blurry, out of focus, cartoon, illustration, low quality, nsfw, brand logos, typography, words, lettering, signatures';
+  // Borders/frames are explicitly excluded because the word "banner" in the prompt
+  // would otherwise cause the AI to add design layout elements.
+  const base = 'border, frame, design overlay, graphic elements, UI elements, layout elements, white border, black border, rounded corners, vignette overlay, text, logos, watermarks, blurry, out of focus, cartoon, illustration, low quality, nsfw, brand logos, typography, words, lettering, signatures';
   return forbiddenColors ? `${base}, ${forbiddenColors} colors` : base;
 }
 
@@ -221,7 +228,7 @@ export function useSportsBannerWizard() {
         ? `${wizardData.bannerSizeLabel} (${wizardData.bannerDimensions}), ${wizardData.negativeSpaceRule}`
         : wizardData.negativeSpaceRule,
       primary_object: wizardData.hasTrophy ? 'golden championship trophy' : '',
-      subject: `${countLabel}${roleStr} ${wizardData.gender.toLowerCase()} ${wizardData.sport} ${wizardData.playerCount === '1' ? 'athlete' : 'athletes'}${nationalityStr}, ${wizardData.action}`,
+      subject: `${countLabel} ${wizardData.gender.toLowerCase()} ${wizardData.sport} ${wizardData.playerCount === '1' ? 'athlete' : 'athletes'}${wizardData.playerRole ? ` — ${wizardData.playerRole} position` : ''}${wizardData.teamNationality ? `, from ${wizardData.teamNationality}` : ''}, ${wizardData.action}`,
       lighting: wizardData.lightingToneDetail
         || (wizardData.backgroundCategory === 'minimal'
           ? 'single spotlight, dramatic rim light'

@@ -35,7 +35,6 @@ export const SPORTS: SportPreset[] = [
       'Dribbler',
       'Header specialist',
       'Celebrating player',
-      'Presenter / host',
     ],
     actions: {
       '1': [
