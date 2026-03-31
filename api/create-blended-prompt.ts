@@ -1,5 +1,25 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// Brand color palettes — same as generate-prompt.ts. Keep in sync when adding new brands.
+const BRAND_PALETTES: Record<string, string> = {
+  FortunePlay: 'Yellow, orange, gold, warm amber, warm casino lighting. NEVER use blue, purple, cyan, neon, or cold tones.',
+  SpinJo:      'Purple, violet, magenta, neon-blue, electric cyan, deep space black. Sci-fi/futuristic palette. NEVER use gold, warm amber, orange, or earthy warm tones.',
+  Roosterbet:  'Red, crimson, fiery orange, black, bold white. High-energy sports palette. NEVER use pastel, soft pink, or muted tones.',
+  LuckyVibe:   'Golden hour warm tones, sunset orange, tropical coral, soft amber, warm backlight. NEVER use cold blue, purple, or neon tones.',
+  SpinsUp:     'Neon purple, electric magenta, showman gold accents, deep black, circus-bright. Magical/mystical palette. NEVER use muted earthy tones or pastels.',
+  PlayMojo:    'Dark noir black, bold white, sharp red accent. Sleek, cinematic. NEVER use warm gold, pastel, or cheerful bright colors.',
+  Lucky7even:  'Deep purple, electric violet, metallic gold accents, black. Rich premium palette. NEVER use flat grey, earthy tones, or muted colors.',
+  NovaDreams:  'Cosmic blue, electric cyan, white, deep navy black. Space/futuristic palette. NEVER use warm orange, red, gold, or earthy tones.',
+  Rollero:     'Crimson red, dark charcoal grey, black, sharp white highlight. Warrior/combat palette. NEVER use pastel, neon, or soft warm tones.',
+};
+
+// Brand scene mandates — signature visual elements that MUST always appear.
+const BRAND_SCENE_MANDATES: Record<string, string> = {
+  Roosterbet:  'FIRE IS MANDATORY: The scene MUST contain fire — flames, embers, or a fiery glow — regardless of outfit, sport, or setting. This is the Roosterbet signature. If the base prompt has no fire, ADD it naturally to the background, floor, or atmosphere.',
+  FortunePlay: 'GOLD IS MANDATORY: The scene MUST include gold accents AND gold dust/particles — floating golden light, golden sparkles, or shimmering gold dust in the air. This is the FortunePlay signature. If the base prompt lacks these, ADD them to the atmosphere or lighting.',
+  LuckyVibe:   'BEACH/SUNSET IS MANDATORY: The scene MUST feature sunset lighting as the primary light source, AND sand must be visible somewhere in the frame. Palm trees MUST appear in the background. This is the LuckyVibe signature.',
+};
+
 async function chatCompletion(opts: {
   systemPrompt: string; userPrompt: string; temperature?: number;
   model?: string; responseFormat?: 'json' | 'text';
@@ -34,7 +54,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'brand and references array are required' });
     }
 
-    const systemPrompt = `You are a creative director for casino and gambling brand imagery. You will receive multiple existing image prompts from a brand's reference library. Your task is to create a COMPLETELY NEW and UNIQUE prompt that takes creative inspiration from the references but is visually DISTINCT from all of them.
+    // Build brand color enforcement rule
+    const palette = BRAND_PALETTES[brand];
+    const brandColorRule = palette
+      ? `BRAND COLOR ENFORCEMENT: This is a ${brand} branded image. Approved color palette: ${palette} All lighting, mood, atmosphere, and background colors MUST comply with this palette. Replace any off-brand colors with on-brand alternatives.`
+      : `BRAND COLOR ENFORCEMENT: This is a ${brand} branded image. Preserve the same color palette as the reference prompts. Do NOT introduce colors not present in the originals. Keep the brand's visual identity consistent.`;
+
+    // Build brand scene mandate rule (only for brands that have one)
+    const mandate = BRAND_SCENE_MANDATES[brand];
+    const brandSceneMandate = mandate
+      ? `\nBRAND SCENE MANDATE (HIGHEST PRIORITY): ${mandate} This rule OVERRIDES everything else.`
+      : '';
+
+    const systemPrompt = `You are a creative director for casino and gambling brand imagery. You will receive multiple existing image prompts from a brand's reference library. Your task is to create a NEW and UNIQUE prompt that blends creative elements from the references while staying true to the brand's visual identity.
+
+The result must feel like it belongs to the ${brand} brand — same colors, same atmosphere, same style — but with a fresh concept not already in the library.
+
+${brandColorRule}${brandSceneMandate}
 
 Each field must be written with the SAME level of detail and length as a professional image brief — multiple sentences, specific visual details, camera angles, composition notes, colors, textures. DO NOT write short summaries.
 
@@ -55,7 +91,7 @@ Return ONLY valid JSON with exactly these keys, no extra text, no markdown:
         `${i + 1}. ${r.name}:\n${r.positive_prompt}`)
       .join('\n\n');
 
-    const userPrompt = `Brand: ${brand}\n\nReference prompts to blend:\n${refList}\n\nCreate a new unique prompt that takes creative inspiration from these but produces a completely different image.`;
+    const userPrompt = `Brand: ${brand}\n\n${brandColorRule}${brandSceneMandate}\n\nReference prompts to blend:\n${refList}\n\nCreate a new unique prompt inspired by these references that is visually fresh but unmistakably ${brand} in style, colors, and atmosphere.`;
 
     const raw = await chatCompletion({
       systemPrompt,
