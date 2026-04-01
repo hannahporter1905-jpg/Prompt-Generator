@@ -138,7 +138,12 @@ function aspectRatioString(dims: { width: number; height: number } | null): stri
 //   - So the prompt must be a scene/environment description, NOT editing instructions.
 //
 // We still apply the same anti-dark-bias logic for strong mode.
-function buildImagenPrompt(mode: string, guidance: string): string {
+function buildImagenPrompt(mode: string, guidance: string, brand: string): string {
+  // Brand identity constraint — Imagen only receives a background description,
+  // so we embed the brand rule directly into the scene description.
+  const brandNote = brand
+    ? `Maintain the "${brand}" brand color palette and visual aesthetic throughout. `
+    : '';
   const brightKeywords = [
     'day', 'bright', 'sun', 'solar', 'noon', 'snow', 'stadium', 'beach',
     'outdoor', 'sky', 'high-key', 'studio', 'white', 'light', 'morning',
