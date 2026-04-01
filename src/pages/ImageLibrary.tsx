@@ -700,7 +700,7 @@ function Lightbox({
         {/* Image area */}
         <div
           className="relative flex-1 flex items-center justify-center p-6 lg:p-10 min-h-0 cursor-pointer"
-          onClick={onClose}
+          onClick={handleCloseAttempt}
         >
           {/* Prev arrow */}
           <button
