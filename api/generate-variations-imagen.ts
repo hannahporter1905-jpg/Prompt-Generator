@@ -209,7 +209,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const dims        = detectDimensions(imgArrayBuffer);
     const aspectRatio = aspectRatioString(dims);
-    const prompt      = buildImagenPrompt(mode, guidance);
+    const prompt      = buildImagenPrompt(mode, guidance, brand);
     const b64Image    = Buffer.from(imgArrayBuffer).toString('base64');
 
     console.log(`[generate-variations-imagen] dims=${JSON.stringify(dims)}, ratio=${aspectRatio}, mode=${mode}, prompt="${prompt.substring(0, 80)}..."`);
