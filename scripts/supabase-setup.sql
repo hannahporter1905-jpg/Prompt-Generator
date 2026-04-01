@@ -69,6 +69,15 @@ create policy "anon can insert generated_images"
 create policy "anon can delete generated_images"
   on generated_images for delete using (true);
 
+-- ── Migrations: safely add columns to existing generated_images table ──
+-- These run after the CREATE TABLE above, so they only matter for databases
+-- that already had the table without these columns.
+alter table generated_images add column if not exists brand_name   text;
+alter table generated_images add column if not exists storage_path text default '';
+alter table generated_images add column if not exists resolution   text;
+alter table generated_images add column if not exists aspect_ratio text;
+alter table generated_images add column if not exists filename     text;
+
 -- ── Storage bucket for generated images ──────────────────────────────────
 -- Creates a PUBLIC bucket — images get a permanent public URL (no auth needed).
 insert into storage.buckets (id, name, public)
