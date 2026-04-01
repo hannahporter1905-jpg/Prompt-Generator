@@ -390,7 +390,7 @@ export function ImageModal({
               {/* Show what changed badge when viewing a variation */}
               {current.isVariation && current.variationMode && (
                 <span className="text-[10px] text-muted-foreground bg-muted rounded-full px-2 py-0.5 mr-1">
-                  {current.variationMode === 'subtle' ? 'Lighting & colors adjusted' : 'Background & palette reimagined'}
+                  {current.variationMode === 'subtle' ? 'Lighting & colors adjusted' : 'Scene variation — palette, lighting & details'}
                 </span>
               )}
               {current.imageId && onToggleFavorite && !current.isVariation && (
