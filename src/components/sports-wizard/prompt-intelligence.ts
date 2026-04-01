@@ -473,7 +473,7 @@ export function buildNarrativePrompt(data: SportsBannerData, brand: string): str
 // 6. Negative prompt builder
 // ─────────────────────────────────────────────
 
-export function buildNegativePrompt(brand: string): string {
+export function buildNegativePrompt(brand: string, kitColors?: string): string {
   const paletteStr = BRAND_PALETTES[brand] ?? '';
   const neverMatch = paletteStr.match(/NEVER use ([^.]+)\./);
   const forbiddenColors = neverMatch ? neverMatch[1] : '';
@@ -492,5 +492,24 @@ export function buildNegativePrompt(brand: string): string {
     'nsfw, violence beyond sport contact',
   ].join(', ');
 
-  return forbiddenColors ? `${base}, ${forbiddenColors} colors` : base;
+  if (!forbiddenColors) return base;
+
+  // If kit colors are provided, remove any forbidden colors that appear in the kit.
+  // Example: LuckyVibe forbids "cold blue" but the kit is "white and blue" — we must not
+  // block blue in the negative prompt or the athlete's shorts will turn orange.
+  if (kitColors) {
+    const kitLower = kitColors.toLowerCase();
+    const filteredForbidden = forbiddenColors
+      .split(',')
+      .map(c => c.trim())
+      .filter(colorPhrase => {
+        // Drop this forbidden phrase if any meaningful word in it appears in the kit colors
+        const words = colorPhrase.split(/\s+/).filter(w => w.length > 3);
+        return !words.some(word => kitLower.includes(word.toLowerCase()));
+      })
+      .join(', ');
+    return filteredForbidden ? `${base}, ${filteredForbidden} colors` : base;
+  }
+
+  return `${base}, ${forbiddenColors} colors`;
 }
