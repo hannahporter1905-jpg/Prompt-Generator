@@ -601,15 +601,19 @@ export function ImageModal({
                       style={{ aspectRatio: '1' }}
                     >
                       <img src={display.displayUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
-                      {/* Badge — provider or variation index */}
+                      {/* Badge — provider or variation index + engine */}
                       <span className={`absolute bottom-1 left-1 text-[9px] rounded px-1 py-0.5 leading-none ${
-                        img.isVariation ? 'bg-primary/80 text-white' : 'bg-black/60 text-white'
+                        img.isVariation
+                          ? img.variationEngine === 'imagen'
+                            ? 'bg-orange-500/85 text-white'   // Imagen = orange
+                            : 'bg-primary/80 text-white'       // OpenAI = primary (blue/purple)
+                          : 'bg-black/60 text-white'
                       }`}>
                         {img.isVariation
-                          ? `V${img.variationIndex}`
+                          ? img.variationEngine === 'imagen' ? `IMG` : `OAI`
                           : img.provider === 'chatgpt' ? 'GPT' : 'GEM'}
                       </span>
-                      {/* Variation mode badge (top-right) */}
+                      {/* Variation mode badge (top-right): SUB / STR */}
                       {img.isVariation && img.variationMode && (
                         <span className={`absolute top-1 right-1 text-[8px] rounded px-1 py-0.5 leading-none font-semibold ${
                           img.variationMode === 'subtle' ? 'bg-sky-500/80 text-white' : 'bg-violet-500/80 text-white'
