@@ -195,7 +195,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     //   subtle = 0.4 (close to original)
     //   strong = 1.0 (more creative freedom)
     // ------------------------------------------------------------------
-    const geminiModel = 'gemini-2.0-flash-exp';
+    const geminiModel = 'gemini-2.0-flash-preview-image-generation';
     const vertexUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${project}/locations/us-central1/publishers/google/models/${geminiModel}:generateContent`;
 
     const numVariations = Math.min(Number(count) || 2, 2);
