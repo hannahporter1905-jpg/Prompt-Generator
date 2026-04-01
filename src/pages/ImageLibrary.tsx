@@ -53,15 +53,8 @@ const SB_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-async function fetchImages(page: number, filter: string): Promise<{ data: GeneratedImage[]; hasMore: boolean }> {
-  const PAGE_SIZE = 40;
-  const offset    = page * PAGE_SIZE;
-  let query = `generated_images?select=*&order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`;
-  if (filter !== 'all') query += `&provider=eq.${encodeURIComponent(filter)}`;
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${query}`, { headers: SB_HEADERS });
-  if (!res.ok) throw new Error(`Failed to load images (${res.status})`);
-  const data: GeneratedImage[] = await res.json();
-  return { data, hasMore: data.length === PAGE_SIZE };
+function fetchImages(page: number, filter: string): { data: GeneratedImage[]; hasMore: boolean } {
+  return getImages(page, filter) as { data: GeneratedImage[]; hasMore: boolean };
 }
 
 async function fetchFavorites(brandFilter: string): Promise<{ data: GeneratedImage[]; hasMore: boolean }> {
