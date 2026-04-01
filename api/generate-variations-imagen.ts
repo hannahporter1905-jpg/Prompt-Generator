@@ -243,19 +243,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     //
     //   SUBTLE: BGSWAP with 0.0 dilation — only background changes,
     //           subject stays pixel-perfect.
-    //   STRONG: INPAINT_INSERTION with HIGH dilation (0.3) — the mask
-    //           bleeds significantly into the subject area, so BOTH
-    //           background and parts of the subject get reimagined.
-    //           Lower baseSteps = more creative freedom.
+    //   STRONG: BGSWAP with 0.15 dilation — background is swapped but
+    //           stays thematically related to the original scene.
+    //           Moderate dilation lets some variation bleed into subject edges.
+    //           BGSWAP is context-aware (keeps scene relevant), unlike
+    //           INPAINT_INSERTION which treats the mask as a blank canvas.
     // ------------------------------------------------------------------
     const vertexUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${project}/locations/us-central1/publishers/google/models/imagen-3.0-capability-001:predict`;
 
     const numVariations = Math.min(Number(count) || 2, 2);
 
-    // Mode-specific parameters
-    const editMode   = mode === 'subtle' ? 'EDIT_MODE_BGSWAP' : 'EDIT_MODE_INPAINT_INSERTION';
-    const baseSteps  = mode === 'subtle' ? 75 : 35;  // Lower = more creative divergence
-    const dilation   = mode === 'subtle' ? 0.0 : 0.3; // 0.3 = mask bleeds 30% into subject edges
+    // Mode-specific parameters — both use BGSWAP to keep scene contextually related
+    const editMode   = 'EDIT_MODE_BGSWAP';
+    const baseSteps  = mode === 'subtle' ? 75 : 50;   // 50 = moderate creative freedom while staying grounded
+    const dilation   = mode === 'subtle' ? 0.0 : 0.15; // 0.15 = slight bleed into subject edges
 
     // Use different seeds per request so we get actual variation between the two results
     const makeRequest = (seed: number) =>
