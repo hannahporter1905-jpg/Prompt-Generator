@@ -1466,14 +1466,14 @@ export default function ImageLibrary({ embedded, onBack }: { embedded?: boolean;
     if (f === filter) return;
     setFilter(f);
     setBrandFilter('all');
-    setImages([]);
     setPage(0);
+    // Don't clear images here — load() with reset=true replaces them immediately
+    // (sync for localStorage, spinner shown for async Favorites)
   };
 
   const handleBrandFilter = (b: string) => {
     if (b === brandFilter) return;
     setBrandFilter(b);
-    setImages([]);
   };
 
   const handleDeleted = (id: string) => {
