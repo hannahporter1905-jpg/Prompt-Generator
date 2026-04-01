@@ -216,7 +216,6 @@ export function ImageModal({
               provider:     'edit',
               aspect_ratio: 'edited',
               resolution:   resolution || '1K',
-              brand_name:   brand || '',
               filename:     `edited-${Date.now()}.png`,
               storage_path: '',
             }),
