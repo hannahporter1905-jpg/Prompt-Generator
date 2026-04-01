@@ -153,7 +153,7 @@ function buildImagenPrompt(mode: string, guidance: string): string {
     return guidance ? `${base} ${guidance}.` : base;
   }
 
-  // Strong mode — describe the new background environment
+  // Strong mode — describe moderate changes to the same scene, not a full replacement
   const lightingNote = userWantsBright
     ? 'Brightly lit environment, high-key lighting, vivid colors, no dark shadows. '
     : 'Avoid dark or moody backgrounds unless the direction specifically calls for it. ';
@@ -161,9 +161,9 @@ function buildImagenPrompt(mode: string, guidance: string): string {
   const qualityNote = 'Photorealistic, high quality, cinematic lighting, no text, no logos, no watermarks.';
 
   if (guidance) {
-    return `${lightingNote}${guidance}. ${qualityNote}`;
+    return `${lightingNote}The same environment as the original with moderate variations. ${guidance}. ${qualityNote}`;
   }
-  return `${lightingNote}A dramatically different background environment. Vibrant and dynamic. ${qualityNote}`;
+  return `${lightingNote}The same environment as the original with moderate variations. Shift the color palette, change the time of day, alter background details like crowd placement or atmospheric effects. Keep the same general setting and location type. ${qualityNote}`;
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
