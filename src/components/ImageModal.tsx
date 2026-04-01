@@ -171,9 +171,11 @@ export function ImageModal({
     if (!editInstructions.trim()) return;
     setIsEditing(true); setEditError(null);
     try {
+      // Use displayUrl (direct image link) — editUrl is a Drive view page that returns HTML, not image bytes
+      const srcUrl = current.displayUrl || current.editUrl;
       const res = await fetch('/api/edit-image', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: current.editUrl, editInstructions: editInstructions.trim(), resolution }),
+        body: JSON.stringify({ imageUrl: srcUrl, editInstructions: editInstructions.trim(), resolution }),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Failed'); }
       const data = await res.json();
