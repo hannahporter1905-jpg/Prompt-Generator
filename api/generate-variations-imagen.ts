@@ -97,7 +97,8 @@ function buildGeminiPrompt(mode: string, guidance: string, brand: string): strin
 
   if (mode === 'subtle') {
     const base = [
-      'Create a subtle variation of this image.',
+      'Generate a NEW image that is a subtle variation of the reference image I provided.',
+      'CRITICAL: You must OUTPUT a COMPLETE NEW IMAGE at the SAME resolution and dimensions. Do NOT crop, zoom, or trim the image. The output must be the same size as the input.',
       brandIdentity,
       'Preserve the EXACT composition, subject, character, pose, outfit, and overall structure.',
       'Change ONLY minor lighting warmth, color temperature, soft atmospheric mood details, and slight environmental ambience.',
@@ -122,11 +123,13 @@ function buildGeminiPrompt(mode: string, guidance: string, brand: string): strin
     : 'LIGHTING: Avoid defaulting to dark/moody backgrounds just because the subject has glowing or fire elements. Match lighting to the original.';
 
   const variation = [
-    'Create a FRESH, improved variation of this image — like an alternate version that could be even better than the original.',
+    'Using the reference image I provided as inspiration, GENERATE A COMPLETELY NEW IMAGE from scratch that is a creative variation of it.',
+    'CRITICAL RULES:',
+    '- You MUST generate a FULL NEW IMAGE at the SAME dimensions and aspect ratio as the reference. Do NOT crop, zoom, pan, or trim the reference image. Do NOT just slightly modify the reference — create something NEW.',
+    '- The output must be a freshly generated image, NOT a filtered/adjusted version of the input.',
     brandIdentity,
     'What to KEEP: The same brand, same type of subject, same general theme and concept. The viewer should recognize it as the same brand and campaign.',
-    'What to CHANGE CREATIVELY: Reimagine the composition — try a different angle, adjust the subject pose or position, vary the arrangement of elements, enhance or rearrange background details, experiment with different dramatic effects (particles, energy, atmosphere).',
-    'The variation should feel like a professional designer created an alternate version — same concept, fresh execution.',
+    'What to CHANGE CREATIVELY: Reimagine the composition — try a different angle, adjust the subject pose or position, vary the arrangement of elements, enhance or rearrange background details, experiment with different dramatic effects (particles, energy, atmosphere). Make it look like a professional designer created an alternate version.',
     'Output quality must be EQUAL or BETTER than the original. Photorealistic, high detail, no text, no logos, no watermarks.',
     antiDarkRule,
   ].join('\n');
