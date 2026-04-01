@@ -5,14 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { HtmlConversionModal } from './HtmlConversionModal';
 import { FavoriteHeart } from './FavoriteHeart';
 
-// Supabase config for saving to image library
-const SUPABASE_URL  = import.meta.env.VITE_SUPABASE_URL      || '';
-const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const SB_HEADERS = {
-  apikey: SUPABASE_ANON,
-  Authorization: `Bearer ${SUPABASE_ANON}`,
-  'Content-Type': 'application/json',
-};
+import { storeImage } from '@/lib/imageStore';
 
 export interface GalleryImage {
   displayUrl: string;
