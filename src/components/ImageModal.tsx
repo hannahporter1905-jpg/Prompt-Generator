@@ -199,51 +199,118 @@ export function ImageModal({
     setVariationError(null);
     setGeneratedVariations([]);
     setVariationElapsed(0);
-    // Variations always sit right after the original images — fixed position
-    const startIdx = allImages!.length;
     variationIntervalRef.current = setInterval(() => setVariationElapsed(p => p + 1), 1000);
+
+    const body = JSON.stringify({
+      imageUrl: srcUrl,
+      mode: variationType,
+      guidance: variationInstructions.trim(),
+      count: 2,
+      resolution,
+    });
+
     try {
-      const resp = await fetch('/api/generate-variations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageUrl: srcUrl,
-          mode: variationType,
-          guidance: variationInstructions.trim(),
-          count: 2,
-          resolution,
-        }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || err.message || 'Failed to generate variations');
+      let newVarImages: GalleryImage[] = [];
+
+      if (compareEngines) {
+        // ── Compare mode: call OpenAI + Imagen in parallel ─────────────────
+        // Both requests fire at the same time so we get results from both engines.
+        const [openaiResult, imagenResult] = await Promise.allSettled([
+          fetch('/api/generate-variations',        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }),
+          fetch('/api/generate-variations-imagen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }),
+        ]);
+
+        const errors: string[] = [];
+
+        const extractVariations = async (
+          result: PromiseSettledResult<Response>,
+          engine: 'openai' | 'imagen',
+          label: string,
+        ): Promise<GalleryImage[]> => {
+          if (result.status === 'rejected') {
+            errors.push(`${label}: ${result.reason}`);
+            return [];
+          }
+          if (!result.value.ok) {
+            const e = await result.value.json().catch(() => ({})) as { error?: string };
+            errors.push(`${label}: ${e.error || result.value.status}`);
+            return [];
+          }
+          const data = await result.value.json() as { variations?: Array<{ imageUrl?: string }> };
+          const urls = (data.variations ?? []).map(v => v.imageUrl).filter(Boolean) as string[];
+          return urls.map((url, i) => ({
+            displayUrl: url,
+            editUrl: url,
+            provider: current.provider,
+            imageId: `var-${engine}-${activeIdx}-${Date.now()}-${i}`,
+            isVariation: true,
+            variationMode: variationType,
+            variationIndex: i + 1,
+            variationEngine: engine,
+          }));
+        };
+
+        const [openaiImages, imagenImages] = await Promise.all([
+          extractVariations(openaiResult, 'openai', 'OpenAI'),
+          extractVariations(imagenResult, 'imagen', 'Imagen'),
+        ]);
+
+        // Interleave: openai[0], imagen[0], openai[1], imagen[1]
+        // This groups them visually as pairs in the strip for easy comparison.
+        const maxLen = Math.max(openaiImages.length, imagenImages.length);
+        for (let i = 0; i < maxLen; i++) {
+          if (openaiImages[i]) newVarImages.push(openaiImages[i]);
+          if (imagenImages[i]) newVarImages.push(imagenImages[i]);
+        }
+
+        if (newVarImages.length === 0) {
+          throw new Error(`Both engines failed:\n${errors.join('\n')}`);
+        }
+        if (errors.length > 0) {
+          // Non-fatal: at least one engine succeeded — show error as a warning
+          console.warn('[compare] partial failure:', errors);
+          setVariationError(`Note: ${errors.join('; ')}`);
+        }
+
+      } else {
+        // ── Single-engine mode (original behaviour) ─────────────────────────
+        const resp = await fetch('/api/generate-variations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({})) as { error?: string; message?: string };
+          throw new Error(err.error || err.message || 'Failed to generate variations');
+        }
+        const data = await resp.json() as { variations?: Array<{ imageUrl?: string }> };
+        const urls = (data.variations ?? []).map(v => v.imageUrl).filter(Boolean) as string[];
+        if (urls.length === 0) throw new Error('No variations were generated. Please try again.');
+
+        newVarImages = urls.map((url, i) => ({
+          displayUrl: url,
+          editUrl: url,
+          provider: current.provider,
+          imageId: `var-${activeIdx}-${Date.now()}-${i}`,
+          isVariation: true,
+          variationMode: variationType,
+          variationIndex: i + 1,
+          variationEngine: 'openai' as const,
+        }));
       }
-      const data = await resp.json();
-      const urls: string[] = (data.variations ?? [])
-        .map((v: { imageUrl?: string }) => v.imageUrl)
-        .filter(Boolean);
-      if (urls.length === 0) throw new Error('No variations were generated. Please try again.');
 
-      // Build gallery objects for each variation
-      const newVarImages: GalleryImage[] = urls.map((url, i) => ({
-        displayUrl: url,
-        editUrl: url,
-        provider: current.provider,
-        imageId: `var-${activeIdx}-${Date.now()}-${i}`,
-        isVariation: true,
-        variationMode: variationType,
-        variationIndex: i + 1,
-      }));
+      setGeneratedVariations(newVarImages.map(v => v.displayUrl));
 
-      setGeneratedVariations(urls);
-      // Keep variations of the OTHER type — only replace same-type variations
+      // Keep variations of the OTHER mode type — only replace same-mode variations
       const existingOtherType = localVariations.filter(v => v.variationMode !== variationType);
       const newAll = [...existingOtherType, ...newVarImages];
       setLocalVariations(newAll);
-      // Navigate to the first of the newly generated variations
+
+      // Navigate to the first new variation
       const newBatchStart = allImages!.length + existingOtherType.length;
       setVarGalleryStartIdx(newBatchStart);
       setActiveIdx(newBatchStart);
+
     } catch (err) {
       setVariationError(err instanceof Error ? err.message : 'Failed to generate variations');
     } finally {
