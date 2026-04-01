@@ -373,7 +373,7 @@ export function ImageModal({
               )}
               <span className="font-semibold text-sm">
                 {current.isVariation
-                  ? `Variation ${current.variationIndex} · ${current.variationMode === 'subtle' ? 'Subtle' : 'Strong'}`
+                  ? `Variation ${current.variationIndex} · ${current.variationMode === 'subtle' ? 'Subtle' : 'Strong'}${current.variationEngine === 'imagen' ? ' · Imagen' : current.variationEngine === 'openai' ? ' · OpenAI' : ''}`
                   : `Generated Image (${current.provider === 'chatgpt' ? 'ChatGPT' : 'Gemini'})`}
               </span>
               {showStrip && (
