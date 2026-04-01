@@ -10,6 +10,7 @@ import { usePromptGenerator } from "@/hooks/usePromptGenerator";
 import { useReferencePromptData } from "@/hooks/useReferencePromptData";
 import { LikedImagesPanel } from "@/components/LikedImagesPanel";
 import { FormData } from "@/types/prompt";
+import type { GalleryImage } from "@/components/ImageModal";
 
 const Index = () => {
   const {
