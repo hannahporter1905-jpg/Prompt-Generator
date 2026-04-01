@@ -907,7 +907,7 @@ export function ImageModal({
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={doClose}
+                onClick={handleDiscardAndClose}
                 disabled={isSavingUnsaved}
               >
                 Discard & Exit
