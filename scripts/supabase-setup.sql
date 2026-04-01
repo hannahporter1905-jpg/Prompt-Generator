@@ -42,6 +42,33 @@ create policy "anon can read web_image_analysis"
 create policy "anon can read liked_images"
   on liked_images for select using (true);
 
+-- ── Table 3: All generated images (ChatGPT, Gemini, edits, variations) ──
+create table if not exists generated_images (
+  id           uuid primary key default gen_random_uuid(),
+  public_url   text not null,           -- GDrive CDN URL of the image
+  provider     text,                    -- 'chatgpt' | 'gemini' | 'edit' | 'variation'
+  aspect_ratio text,                    -- '16:9' | '1:1' | 'edited' | 'varied'
+  resolution   text,                    -- '1K' | '2K' | '3K' | '4K'
+  filename     text,                    -- human-readable filename
+  storage_path text default '',         -- reserved for future Supabase Storage use
+  brand_name   text,                    -- brand this image belongs to
+  created_at   timestamptz default now()
+);
+
+alter table generated_images enable row level security;
+
+-- Anyone with the anon key can read images
+create policy "anon can read generated_images"
+  on generated_images for select using (true);
+
+-- Anyone with the anon key can insert (frontend saves directly)
+create policy "anon can insert generated_images"
+  on generated_images for insert with check (true);
+
+-- Anyone with the anon key can delete their own images
+create policy "anon can delete generated_images"
+  on generated_images for delete using (true);
+
 -- ── Storage bucket for generated images ──────────────────────────────────
 -- Creates a PUBLIC bucket — images get a permanent public URL (no auth needed).
 insert into storage.buckets (id, name, public)
