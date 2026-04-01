@@ -216,14 +216,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const project     = getProjectNumber();
 
     // ------------------------------------------------------------------
-    // 3. Call Vertex AI imagegeneration@006 with bgswap edit mode
+    // 3. Call Vertex AI imagen-3.0-capability-001 with BGSWAP edit mode
     //
-    // bgswap: Imagen auto-segments foreground vs background, keeps the foreground
-    // subject pixel-perfect, and regenerates only the background from the prompt.
-    // No mask image needed — Imagen handles the segmentation automatically.
+    // API format changed in Imagen 3 capability model vs the old imagegeneration@006:
+    //   - Image goes in referenceImages[] with referenceType REFERENCE_TYPE_RAW
+    //   - editMode moves to parameters level (not inside editConfig)
+    //   - editConfig now takes baseSteps instead of editMode
+    //   - Mask auto-detection via MASK_MODE_BACKGROUND (no mask image required)
     // ------------------------------------------------------------------
-    // imagen-3.0-capability-001 is the current Imagen 3 editing model.
-    // imagegeneration@006 was retired Sep 24 2025.
     const vertexUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${project}/locations/us-central1/publishers/google/models/imagen-3.0-capability-001:predict`;
 
     const numVariations = Math.min(Number(count) || 2, 2);
@@ -239,19 +239,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         body: JSON.stringify({
           instances: [{
             prompt,
-            image: {
-              bytesBase64Encoded: b64Image,
-              mimeType,
-            },
+            referenceImages: [
+              {
+                // The source image to edit
+                referenceType: 'REFERENCE_TYPE_RAW',
+                referenceId: 1,
+                referenceImage: {
+                  bytesBase64Encoded: b64Image,
+                },
+              },
+              {
+                // Auto-detect background for masking — no mask image needed
+                referenceType: 'REFERENCE_TYPE_MASK',
+                referenceId: 2,
+                maskImageConfig: {
+                  maskMode: 'MASK_MODE_BACKGROUND',
+                  dilation: 0.0,
+                },
+              },
+            ],
           }],
           parameters: {
-            sampleCount: 1,
-            aspectRatio,
+            editMode: 'EDIT_MODE_BGSWAP',
             editConfig: {
-              editMode: 'EDIT_MODE_BGSWAP',
+              baseSteps: 75,
             },
+            sampleCount: 1,
             seed,
-            // Safety settings — allow the kind of stylised content these brand images use
             safetyFilterLevel: 'block_some',
             personGeneration: 'allow_adult',
           },
