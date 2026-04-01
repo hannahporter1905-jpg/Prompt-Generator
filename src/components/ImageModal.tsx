@@ -395,39 +395,49 @@ export function ImageModal({
     onClose();
   };
 
-  // Save selected items to localStorage image library, then close
-  const handleSaveAndClose = async () => {
+  // User clicked "Save & Exit" in the dialog:
+  // Items that were auto-saved but NOT selected get deleted from localStorage.
+  const handleSaveAndClose = () => {
     setIsSavingUnsaved(true);
     try {
-      // Save edited image
-      if (hasUnsavedEdit && saveEditedChecked && lastEditedUrl) {
-        storeImage({
-          public_url:   lastEditedUrl,
-          provider:     'edit',
-          aspect_ratio: 'edited',
-          resolution:   resolution || '1K',
-          filename:     `edited-${Date.now()}.png`,
-        });
+      // Edit: if unchecked, delete the auto-saved copy
+      if (hasUnsavedEdit && !saveEditedChecked && editStoredIdRef.current) {
+        deleteStoredImage(editStoredIdRef.current);
+        editStoredIdRef.current = null;
       }
 
-      // Save selected variations
-      for (const idx of selectedVarsToSave) {
-        const variation = unsavedVariations[idx];
-        if (!variation) continue;
-        storeImage({
-          public_url:   variation.displayUrl,
-          provider:     'variation',
-          aspect_ratio: 'varied',
-          resolution:   resolution || '1K',
-          filename:     `variation-${variation.variationMode}-${variation.variationIndex}-${Date.now()}.png`,
-        });
-      }
+      // Variations: delete any that were NOT selected in the dialog
+      unsavedVariations.forEach((variation, i) => {
+        if (!selectedVarsToSave.has(i)) {
+          const storedId = varStoredIdsRef.current.get(variation.imageId);
+          if (storedId) {
+            deleteStoredImage(storedId);
+            varStoredIdsRef.current.delete(variation.imageId);
+          }
+        }
+      });
     } catch (err) {
-      console.error('Failed to save some items:', err);
+      console.error('Failed during save cleanup:', err);
     } finally {
       setIsSavingUnsaved(false);
       doClose();
     }
+  };
+
+  // User clicked "Discard & Exit": delete ALL auto-saved unsaved items from localStorage
+  const handleDiscardAndClose = () => {
+    // Delete auto-saved edit
+    if (editStoredIdRef.current) {
+      deleteStoredImage(editStoredIdRef.current);
+      editStoredIdRef.current = null;
+    }
+    // Delete all auto-saved variations that weren't individually confirmed
+    unsavedVariations.forEach(variation => {
+      const storedId = varStoredIdsRef.current.get(variation.imageId);
+      if (storedId) deleteStoredImage(storedId);
+    });
+    varStoredIdsRef.current.clear();
+    doClose();
   };
 
   if (!isOpen) return null;
