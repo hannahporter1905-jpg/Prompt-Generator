@@ -53,6 +53,15 @@ function sizeForDimensions(dims: { width: number; height: number } | null): stri
   return '1024x1024';
 }
 
+// Match quality to source resolution — 'high' is significantly slower (~70s vs ~30s).
+function qualityForDimensions(dims: { width: number; height: number } | null): 'low' | 'medium' | 'high' {
+  if (!dims) return 'medium';
+  const longest = Math.max(dims.width, dims.height);
+  if (longest >= 1800) return 'high';   // 2K+ → high
+  if (longest >= 900)  return 'medium'; // ~1K → medium
+  return 'low';                          // thumbnails → low
+}
+
 // ── OpenAI Direct Edit ───────────────────────────────────────────────────────
 
 async function editViaOpenAI(
