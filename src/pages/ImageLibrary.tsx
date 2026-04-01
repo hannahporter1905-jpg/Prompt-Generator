@@ -90,13 +90,8 @@ async function unlikeImage(recordId: string, imgUrl: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to remove favorite');
 }
 
-async function deleteImage(id: string): Promise<void> {
-  const res = await fetch('/api/delete-generated-image', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id }),
-  });
-  if (!res.ok) throw new Error('Failed to delete image');
+function deleteImage(id: string): void {
+  deleteStoredImage(id);
 }
 
 async function replaceImage(id: string, editedUrl: string, original: GeneratedImage): Promise<GeneratedImage> {
