@@ -81,13 +81,16 @@ async function editViaOpenAI(
 
   const dims = detectImageDimensions(imgArrayBuffer);
   const outputSize = sizeForDimensions(dims);
+  const outputQuality = qualityForDimensions(dims);
+
+  console.log(`[edit-image] source dims: ${JSON.stringify(dims)} → quality=${outputQuality}, size=${outputSize}`);
 
   const form = new FormData();
   form.append('model', 'gpt-image-1');
   form.append('image', new File([imgArrayBuffer], `source.${ext}`, { type: baseMime }));
   form.append('prompt', editInstructions);
   form.append('n', '1');
-  form.append('quality', 'high');
+  form.append('quality', outputQuality);
   form.append('size', outputSize);
 
   const resp = await fetch('https://api.openai.com/v1/images/edits', {
