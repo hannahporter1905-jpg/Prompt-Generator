@@ -391,51 +391,33 @@ export function ImageModal({
     onClose();
   };
 
-  // Save selected items to image library (generated_images table), then close
+  // Save selected items to localStorage image library, then close
   const handleSaveAndClose = async () => {
     setIsSavingUnsaved(true);
     try {
-      const savePromises: Promise<void>[] = [];
-
       // Save edited image
       if (hasUnsavedEdit && saveEditedChecked && lastEditedUrl) {
-        savePromises.push(
-          fetch(`${SUPABASE_URL}/rest/v1/generated_images`, {
-            method: 'POST',
-            headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
-            body: JSON.stringify({
-              public_url:   lastEditedUrl,
-              provider:     'edit',
-              aspect_ratio: 'edited',
-              resolution:   resolution || '1K',
-              filename:     `edited-${Date.now()}.png`,
-              storage_path: '',
-            }),
-          }).then(r => { if (!r.ok) throw new Error('Failed to save edited image'); })
-        );
+        storeImage({
+          public_url:   lastEditedUrl,
+          provider:     'edit',
+          aspect_ratio: 'edited',
+          resolution:   resolution || '1K',
+          filename:     `edited-${Date.now()}.png`,
+        });
       }
 
       // Save selected variations
       for (const idx of selectedVarsToSave) {
         const variation = unsavedVariations[idx];
         if (!variation) continue;
-        savePromises.push(
-          fetch(`${SUPABASE_URL}/rest/v1/generated_images`, {
-            method: 'POST',
-            headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
-            body: JSON.stringify({
-              public_url:   variation.displayUrl,
-              provider:     'variation',
-              aspect_ratio: 'varied',
-              resolution:   resolution || '1K',
-              filename:     `variation-${variation.variationMode}-${variation.variationIndex}-${Date.now()}.png`,
-              storage_path: '',
-            }),
-          }).then(r => { if (!r.ok) throw new Error('Failed to save variation'); })
-        );
+        storeImage({
+          public_url:   variation.displayUrl,
+          provider:     'variation',
+          aspect_ratio: 'varied',
+          resolution:   resolution || '1K',
+          filename:     `variation-${variation.variationMode}-${variation.variationIndex}-${Date.now()}.png`,
+        });
       }
-
-      await Promise.all(savePromises);
     } catch (err) {
       console.error('Failed to save some items:', err);
     } finally {
