@@ -1047,6 +1047,7 @@ export function ResultDisplay({
             initialIndex={modalImage.initialIndex}
             likedImages={favorites}
             onToggleFavorite={handleToggleFavorite}
+            onImageUpdated={handleImageUpdated}
             resolution={resolution}
             brand={metadata?.brand}
             persistedVariations={persistedVariations}
