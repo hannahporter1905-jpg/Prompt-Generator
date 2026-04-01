@@ -491,7 +491,7 @@ export function ImageModal({
                   className="relative static opacity-100"
                 />
               )}
-              <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+              <button onClick={handleCloseAttempt} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
