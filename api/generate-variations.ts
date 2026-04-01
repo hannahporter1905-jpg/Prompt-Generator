@@ -106,12 +106,10 @@ function buildPrompt(mode: string, guidance: string, brand: string): string {
   }
 
   // ── STRONG mode ────────────────────────────────────────────────────────────
-  // Core subject lock — never changes regardless of guidance
-  const subjectLock = [
-    'The main subject (character, outfit, pose, and any brand-specific design elements such as a flaming ball, logo, or costume) must remain 100% identical to the source image.',
-    'Do NOT alter the subject in any way.',
-    brandIdentity,
-  ].join(' ');
+  // Goal: create a FRESH, potentially BETTER version — not just a lighting shift.
+  // The user should look at the variation and think "oh, this one might be better."
+  // Allow real creative changes to composition, subject angle, background details,
+  // and visual elements — while preserving brand identity (colors).
 
   // Detect whether the user is asking for something bright/outdoor
   const brightKeywords = ['day', 'bright', 'sun', 'solar', 'noon', 'snow', 'stadium', 'beach',
@@ -119,35 +117,24 @@ function buildPrompt(mode: string, guidance: string, brand: string): string {
     'afternoon', 'cloudy', 'overcast', 'neon city'];
   const userWantsBright = brightKeywords.some(kw => guidance.toLowerCase().includes(kw));
 
-  // Anti-dark-bias block — always included for strong mode, amplified when user wants bright
   const antiDarkRule = userWantsBright
-    ? [
-        'CRITICAL LIGHTING OVERRIDE: The new background MUST be brightly lit.',
-        'Use ONLY high-key, vivid, well-illuminated lighting — flooded with daylight, midday sun, or bright artificial studio light.',
-        'This is NON-NEGOTIABLE: absolutely NO dark backgrounds, no night scenes, no dim lighting, no moody shadows, no low-key or horror-style lighting, no black backgrounds.',
-        'Even though the subject contains fire or glowing elements, those effects remain visible in a bright environment.',
-        'Do not let the presence of fire/glow push the scene toward darkness.',
-      ].join(' ')
-    : [
-        'IMPORTANT: Avoid defaulting to dark, moody, or nighttime backgrounds simply because the subject contains glowing or fire elements.',
-        'Glowing effects can exist in any lighting environment.',
-        'Choose a background lighting style that complements the user direction, which may be bright, neutral, or atmospheric.',
-      ].join(' ');
+    ? 'LIGHTING: The scene MUST be brightly lit — high-key, vivid, well-illuminated. No dark backgrounds, no night scenes, no dim lighting.'
+    : 'LIGHTING: Avoid defaulting to dark/moody backgrounds just because the subject has glowing or fire elements. Match lighting to the original or user direction.';
 
-  const sceneVariation = [
-    'Create a variation of this image that feels like a fresh take on the SAME scene.',
-    'Keep the same general environment, setting, and location type.',
-    'Apply noticeable but moderate changes: shift the color palette, alter the time of day or lighting mood, reposition or vary background details (crowd density, object placement, weather, atmospheric effects).',
-    'The result should be clearly distinguishable from the original but still recognizably the same scene — NOT a completely different location or environment.',
-    'Do NOT replace the background with a different setting.',
-  ].join(' ');
+  const variation = [
+    'Create a FRESH, improved variation of this image — like an alternate version that could be even better than the original.',
+    brandIdentity,
+    'What to KEEP: The same brand, same type of subject, same general theme and concept. The viewer should recognize it as the same brand and campaign.',
+    'What to CHANGE CREATIVELY: Reimagine the composition — try a different angle, adjust the subject pose or position, vary the arrangement of elements, enhance or rearrange background details, experiment with different dramatic effects (particles, energy, atmosphere).',
+    'The variation should feel like a professional designer created an alternate version — same concept, fresh execution.',
+    'IMPORTANT: Output quality must be EQUAL or BETTER than the original. Do NOT downgrade resolution, detail, or visual fidelity.',
+    antiDarkRule,
+  ].join('\n');
 
-  const parts = [subjectLock, antiDarkRule, sceneVariation];
   if (guidance) {
-    parts.push(`Direction for the variation: ${guidance}`);
+    return `${variation}\n\nCreative direction: ${guidance}`;
   }
-
-  return parts.join('\n\n');
+  return variation;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
