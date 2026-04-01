@@ -339,31 +339,22 @@ export function ImageModal({
       setVarGalleryStartIdx(newBatchStart);
       setActiveIdx(newBatchStart);
 
-      // Auto-save all new variations to the image library immediately
-      // This ensures they appear in Image Library even if the user navigates away
-      if (SUPABASE_URL) {
-        const newSavedIds = new Set<string>();
-        const autoSavePromises = newVarImages.map(variation =>
-          fetch(`${SUPABASE_URL}/rest/v1/generated_images`, {
-            method: 'POST',
-            headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
-            body: JSON.stringify({
-              public_url:   variation.displayUrl,
-              provider:     'variation',
-              aspect_ratio: 'varied',
-              resolution:   resolution || '1K',
-              filename:     `variation-${variation.variationMode}-${variation.variationIndex}-${Date.now()}.png`,
-              storage_path: '',
-            }),
-          }).then(r => {
-            if (r.ok) newSavedIds.add(variation.imageId);
-          }).catch(err => console.error('Auto-save variation failed:', err))
-        );
-        Promise.all(autoSavePromises).then(() => {
-          if (newSavedIds.size > 0) {
-            setSavedVariationIds(prev => new Set([...prev, ...newSavedIds]));
-          }
-        });
+      // Auto-save all new variations to localStorage immediately so they persist when navigating away
+      const newSavedIds = new Set<string>();
+      for (const variation of newVarImages) {
+        try {
+          storeImage({
+            public_url:   variation.displayUrl,
+            provider:     'variation',
+            aspect_ratio: 'varied',
+            resolution:   resolution || '1K',
+            filename:     `variation-${variation.variationMode}-${variation.variationIndex}-${Date.now()}.png`,
+          });
+          newSavedIds.add(variation.imageId);
+        } catch (err) { console.error('Auto-save variation failed:', err); }
+      }
+      if (newSavedIds.size > 0) {
+        setSavedVariationIds(prev => new Set([...prev, ...newSavedIds]));
       }
 
     } catch (err) {
