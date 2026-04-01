@@ -15,7 +15,7 @@ const BRAND_PALETTES: Record<string, string> = {
 
 // Brand scene mandates — signature visual elements that MUST always appear.
 const BRAND_SCENE_MANDATES: Record<string, string> = {
-  Roosterbet:  'FIRE IS MANDATORY: The scene MUST contain fire — flames, embers, or a fiery glow — regardless of outfit, sport, or setting. This is the Roosterbet signature. If the base prompt has no fire, ADD it naturally to the background, floor, or atmosphere.',
+  Roosterbet:  'FIRE IS MANDATORY AND MUST ORIGINATE FROM THE PLAYER: Fire and flames MUST burst outward FROM the athlete — erupting from their feet, legs, arms, or movement trail as they perform the action. The player should appear to be GENERATING the fire through their athletic intensity and power. Do NOT place fire only in the background or floor — it must come FROM the player\'s body and movement. Make the fire dynamic, explosive, and visually striking — an extension of the player\'s energy. This is the Roosterbet signature.',
   FortunePlay: 'GOLD IS MANDATORY: The scene MUST include gold accents AND gold dust/particles — floating golden light, golden sparkles, or shimmering gold dust in the air. This is the FortunePlay signature. If the base prompt lacks these, ADD them to the atmosphere or lighting.',
   LuckyVibe:   'BEACH/SUNSET IS MANDATORY: The scene MUST feature sunset lighting as the primary light source, AND sand must be visible somewhere in the frame. Palm trees MUST appear in the background. This is the LuckyVibe signature.',
 };
