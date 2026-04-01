@@ -343,13 +343,83 @@ export function ImageModal({
     }
   };
 
-  const handleClose = () => {
+  // Check if there are unsaved items when user tries to close
+  const hasUnsavedEdit = !!lastEditedUrl;
+  const unsavedVariations = localVariations.filter(v => !savedVariationIds.has(v.imageId));
+  const hasUnsavedWork = hasUnsavedEdit || unsavedVariations.length > 0;
+
+  const handleCloseAttempt = () => {
+    if (hasUnsavedWork) {
+      // Pre-select all unsaved variations
+      setSelectedVarsToSave(new Set(unsavedVariations.map((_, i) => i)));
+      setSaveEditedChecked(true);
+      setShowUnsavedDialog(true);
+    } else {
+      doClose();
+    }
+  };
+
+  const doClose = () => {
     // Save variations to parent before closing so they survive the next open
     onVariationsChange?.(localVariations);
     setEditInstructions(''); setEditError(null);
     setVariationError(null); setVariationInstructions('');
+    setShowUnsavedDialog(false);
     updatedUrlsRef.current.clear();
     onClose();
+  };
+
+  // Save selected items to image library (generated_images table), then close
+  const handleSaveAndClose = async () => {
+    setIsSavingUnsaved(true);
+    try {
+      const savePromises: Promise<void>[] = [];
+
+      // Save edited image
+      if (hasUnsavedEdit && saveEditedChecked && lastEditedUrl) {
+        savePromises.push(
+          fetch(`${SUPABASE_URL}/rest/v1/generated_images`, {
+            method: 'POST',
+            headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+            body: JSON.stringify({
+              public_url:   lastEditedUrl,
+              provider:     'edit',
+              aspect_ratio: 'edited',
+              resolution:   resolution || '1K',
+              filename:     `edited-${Date.now()}.png`,
+              storage_path: '',
+            }),
+          }).then(r => { if (!r.ok) throw new Error('Failed to save edited image'); })
+        );
+      }
+
+      // Save selected variations
+      for (const idx of selectedVarsToSave) {
+        const variation = unsavedVariations[idx];
+        if (!variation) continue;
+        savePromises.push(
+          fetch(`${SUPABASE_URL}/rest/v1/generated_images`, {
+            method: 'POST',
+            headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+            body: JSON.stringify({
+              public_url:   variation.displayUrl,
+              provider:     'variation',
+              aspect_ratio: 'varied',
+              resolution:   resolution || '1K',
+              filename:     `variation-${variation.variationMode}-${variation.variationIndex}-${Date.now()}.png`,
+              storage_path: '',
+            }),
+          }).then(r => { if (!r.ok) throw new Error('Failed to save variation'); })
+        );
+      }
+
+      await Promise.all(savePromises);
+    } catch (err) {
+      console.error('Failed to save some items:', err);
+    } finally {
+      setIsSavingUnsaved(false);
+      doClose();
+    }
   };
 
   if (!isOpen) return null;
