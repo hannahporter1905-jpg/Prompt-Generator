@@ -205,6 +205,22 @@ export function ImageModal({
         setEditInstructions('');
         onImageUpdated?.(newDisplay, newEdit);
         setActiveIdx(i => i);
+
+        // Auto-save edited image to library immediately so it persists even if user navigates away
+        if (SUPABASE_URL) {
+          fetch(`${SUPABASE_URL}/rest/v1/generated_images`, {
+            method: 'POST',
+            headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+            body: JSON.stringify({
+              public_url:   newDisplay,
+              provider:     'edit',
+              aspect_ratio: 'edited',
+              resolution:   resolution || '1K',
+              filename:     `edited-${Date.now()}.png`,
+              storage_path: '',
+            }),
+          }).catch(err => console.error('Auto-save edit failed:', err));
+        }
       } else throw new Error('No image URL returned');
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to edit image');
