@@ -308,6 +308,17 @@ export function ResultDisplay({
     setEditablePrompt(prompt);
   }, [prompt]);
 
+  // Called when an image is edited inside the modal — tracks the new URL so the
+  // thumbnail strip shows the edited version even after the modal closes.
+  const handleImageUpdated = useCallback((newDisplay: string, newEdit: string, imageId?: string) => {
+    if (!imageId) return;
+    setImageUpdates(prev => {
+      const next = new Map(prev);
+      next.set(imageId, { displayUrl: newDisplay, editUrl: newEdit });
+      return next;
+    });
+  }, []);
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(editablePrompt);
     setCopied(true);
