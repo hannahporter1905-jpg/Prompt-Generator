@@ -207,6 +207,7 @@ export function ImageModal({
       guidance: variationInstructions.trim(),
       count: 2,
       resolution,
+      brand: brand || '',
     });
 
     try {
