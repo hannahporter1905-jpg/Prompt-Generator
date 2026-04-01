@@ -79,6 +79,8 @@ export function ImageModal({
   const [generatedVariations, setGeneratedVariations] = useState<string[]>([]);
   const [variationElapsed, setVariationElapsed] = useState(0);
   const variationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Compare mode: calls both OpenAI and Imagen in parallel so results sit side by side
+  const [compareEngines, setCompareEngines] = useState(false);
 
   // Extra variation images appended to gallery strip
   const [localVariations, setLocalVariations] = useState<GalleryImage[]>([]);
