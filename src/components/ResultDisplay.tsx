@@ -864,12 +864,16 @@ export function ResultDisplay({
               const chatgptWithIndex = generatedImages.chatgpt.map((img, idx) => ({ ...img, originalIndex: idx }));
               const geminiWithIndex = generatedImages.gemini.map((img, idx) => ({ ...img, originalIndex: idx }));
               const allImages = [...chatgptWithIndex, ...geminiWithIndex];
-              const flatGallery: GalleryImage[] = allImages.map(img => ({
-                displayUrl: img.displayUrl,
-                editUrl: img.editUrl,
-                provider: img.provider,
-                imageId: `${img.provider}-${img.originalIndex}-${img.displayUrl}`,
-              }));
+              const flatGallery: GalleryImage[] = allImages.map(img => {
+                const imageId = `${img.provider}-${img.originalIndex}-${img.displayUrl}`;
+                const update = imageUpdates.get(imageId);
+                return {
+                  displayUrl: update?.displayUrl ?? img.displayUrl,
+                  editUrl:    update?.editUrl    ?? img.editUrl,
+                  provider:   img.provider,
+                  imageId,
+                };
+              });
               const groupedByRef = allImages.reduce(
                 (acc, img) => {
                   const label = img.referenceLabel || "Unknown";
