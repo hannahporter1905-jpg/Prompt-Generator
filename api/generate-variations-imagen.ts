@@ -166,9 +166,9 @@ function buildImagenPrompt(mode: string, guidance: string, brand: string): strin
   const qualityNote = 'Photorealistic, high quality, cinematic lighting, no text, no logos, no watermarks.';
 
   if (guidance) {
-    return `${lightingNote}The same environment as the original with moderate variations. ${guidance}. ${qualityNote}`;
+    return `${brandNote}${lightingNote}The same environment as the original with moderate variations. ${guidance}. ${qualityNote}`;
   }
-  return `${lightingNote}The same environment as the original with moderate variations. Shift the color palette, change the time of day, alter background details like crowd placement or atmospheric effects. Keep the same general setting and location type. ${qualityNote}`;
+  return `${brandNote}${lightingNote}The same environment as the original with moderate variations. Shift the color palette, change the time of day, alter background details like crowd placement or atmospheric effects. Keep the same general setting and location type. ${qualityNote}`;
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
