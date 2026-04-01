@@ -213,13 +213,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Both modes use REFERENCE_TYPE_RAW + REFERENCE_TYPE_MASK with
     // MASK_MODE_BACKGROUND (auto-detects foreground subject).
     //
-    //   SUBTLE: BGSWAP with 0.0 dilation — only background changes,
-    //           subject stays pixel-perfect.
-    //   STRONG: BGSWAP with 0.15 dilation — background is swapped but
-    //           stays thematically related to the original scene.
-    //           Moderate dilation lets some variation bleed into subject edges.
-    //           BGSWAP is context-aware (keeps scene relevant), unlike
-    //           INPAINT_INSERTION which treats the mask as a blank canvas.
+    //   SUBTLE: Short prompt — "same background, slight lighting shift"
+    //   STRONG: Short prompt — "same setting type, creative changes"
+    //   Both use dilation 0.0 so the subject stays pixel-perfect.
+    //   The difference is only in the prompt (how much change to request).
     // ------------------------------------------------------------------
     const vertexUrl = `https://us-central1-aiplatform.googleapis.com/v1/projects/${project}/locations/us-central1/publishers/google/models/imagen-3.0-capability-001:predict`;
 
