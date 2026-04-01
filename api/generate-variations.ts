@@ -87,11 +87,17 @@ function sizeForDimensions(dims: { width: number; height: number } | null): stri
 //   demanding bright/high-key lighting — even more aggressively when
 //   the user's guidance already hints at something bright.
 // ------------------------------------------------------------------
-function buildPrompt(mode: string, guidance: string): string {
+function buildPrompt(mode: string, guidance: string, brand: string): string {
+  // Brand identity rule — included in EVERY mode so the brand aesthetic is never lost
+  const brandIdentity = brand
+    ? `BRAND IDENTITY RULE: This image belongs to the "${brand}" brand. The brand's signature color palette, visual style, and overall aesthetic MUST be preserved in the variation. Do not introduce colors or styles that conflict with the brand identity.`
+    : 'Preserve the overall color palette and visual style of the original image.';
+
   if (mode === 'subtle') {
     // Subtle: almost nothing changes — just warmth and atmosphere
     const base = [
       'Create a subtle variation of this image.',
+      brandIdentity,
       'Preserve the EXACT composition, subject, character, pose, outfit, colors, and overall structure.',
       'Change ONLY minor lighting warmth, color temperature, and soft atmospheric mood details.',
       'Stay extremely close to the original — do not reimagine the background or alter the subject.',
@@ -104,6 +110,7 @@ function buildPrompt(mode: string, guidance: string): string {
   const subjectLock = [
     'The main subject (character, outfit, pose, and any brand-specific design elements such as a flaming ball, logo, or costume) must remain 100% identical to the source image.',
     'Do NOT alter the subject in any way.',
+    brandIdentity,
   ].join(' ');
 
   // Detect whether the user is asking for something bright/outdoor
