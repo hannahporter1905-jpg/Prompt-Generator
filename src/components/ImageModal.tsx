@@ -633,18 +633,30 @@ export function ImageModal({
               {localVariations.length > 0 && (
                 <div className="mt-3 pt-2 border-t border-border/30 space-y-1">
                   <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Variation legend</p>
-                  <div className="flex gap-2">
+                  {/* Mode badges */}
+                  <div className="flex gap-2 flex-wrap">
                     <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
                       <span className="bg-sky-500/80 text-white rounded px-1 py-0.5 text-[8px] leading-none font-semibold">SUB</span>
-                      Lighting &amp; colors adjusted
+                      Lighting &amp; colors
                     </span>
-                  </div>
-                  <div className="flex gap-2">
                     <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
                       <span className="bg-violet-500/80 text-white rounded px-1 py-0.5 text-[8px] leading-none font-semibold">STR</span>
-                      Background &amp; palette reimagined
+                      Background &amp; palette
                     </span>
                   </div>
+                  {/* Engine badges — shown only when compare mode was used */}
+                  {localVariations.some(v => v.variationEngine) && (
+                    <div className="flex gap-2 flex-wrap pt-0.5">
+                      <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
+                        <span className="bg-primary/80 text-white rounded px-1 py-0.5 text-[8px] leading-none">OAI</span>
+                        OpenAI gpt-image-1
+                      </span>
+                      <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
+                        <span className="bg-orange-500/85 text-white rounded px-1 py-0.5 text-[8px] leading-none">IMG</span>
+                        Vertex AI Imagen
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
