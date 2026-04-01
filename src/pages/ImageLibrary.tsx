@@ -393,6 +393,8 @@ function Lightbox({
   const [generatedVariations, setGeneratedVariations] = useState<string[]>([]);
   const [variationElapsed,    setVariationElapsed]    = useState(0);
   const variationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Engine selector: choose ChatGPT, Gemini, or Both
+  const [selectedEngine, setSelectedEngine] = useState<'chatgpt' | 'gemini' | 'compare'>('chatgpt');
 
   // Variation viewer — full-screen lightbox for individual variations
   const [variationViewerUrl, setVariationViewerUrl]   = useState<string | null>(null);
