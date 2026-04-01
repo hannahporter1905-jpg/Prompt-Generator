@@ -163,10 +163,14 @@ export function ResultDisplay({
   const [modalImage, setModalImage] = useState<{
     initialIndex: number;
   } | null>(null);
-  // Variations generated inside the modal persist here so they survive open/close cycles
-  const [persistedVariations, setPersistedVariations] = useState<GalleryImage[]>([]);
+  // Variations: use prop from parent (persists across tab switches)
+  const persistedVariations = persistedVariationsProp;
+  const setPersistedVariations = onVariationsChange ?? (() => {});
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [editablePrompt, setEditablePrompt] = useState(prompt);
+
+  // Track URL overrides from in-modal edits so the thumbnail strip reflects edits after closing
+  const [imageUpdates, setImageUpdates] = useState<Map<string, { displayUrl: string; editUrl: string }>>(new Map());
 
   // Save as New Reference dialog state (triggered by the 💾 toolbar button)
   const [saveAsRefOpen, setSaveAsRefOpen] = useState(false);
@@ -175,9 +179,11 @@ export function ResultDisplay({
   const [refSaveError, setRefSaveError] = useState('');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-  // Clear persisted variations whenever a fresh set of images is generated
+  // Clear persisted variations + edits whenever a fresh set of images is generated
   useEffect(() => {
     setPersistedVariations([]);
+    setImageUpdates(new Map());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [generatedImages]);
 
   const handleSaveAsRef = async () => {
