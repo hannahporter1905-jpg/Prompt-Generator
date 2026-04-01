@@ -652,7 +652,7 @@ export function ImageModal({
                     </span>
                     <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
                       <span className="bg-violet-500/80 text-white rounded px-1 py-0.5 text-[8px] leading-none font-semibold">STR</span>
-                      Background &amp; palette
+                      Scene variation
                     </span>
                   </div>
                   {/* Engine badges — shown only when compare mode was used */}
