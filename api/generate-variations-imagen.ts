@@ -129,7 +129,8 @@ function buildGeminiPrompt(mode: string, guidance: string, brand: string): strin
     '- The output must be a freshly generated image, NOT a filtered/adjusted version of the input.',
     brandIdentity,
     'What to KEEP: The same brand, same type of subject, same general theme and concept. The viewer should recognize it as the same brand and campaign.',
-    'What to CHANGE CREATIVELY: Reimagine the composition — try a different angle, adjust the subject pose or position, vary the arrangement of elements, enhance or rearrange background details, experiment with different dramatic effects (particles, energy, atmosphere). Make it look like a professional designer created an alternate version.',
+    'What to CHANGE CREATIVELY: Reimagine the composition — try a different angle, adjust the subject pose or position, vary the arrangement of elements, enhance or rearrange background details. Make it look like a professional designer created an alternate version.',
+    'Do NOT add visual effects that are not in the original image (no lightning, sparks, electric arcs, lens flares, or extra glows unless the original already has them).',
     'Output quality must be EQUAL or BETTER than the original. Photorealistic, high detail, no text, no logos, no watermarks.',
     antiDarkRule,
   ].join('\n');
