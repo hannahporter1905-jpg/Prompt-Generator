@@ -59,39 +59,39 @@ function fetchImages(page: number, filter: string): { data: GeneratedImage[]; ha
 
 // ── Background sync: copy Supabase generated_images → localStorage ─────────────
 // Runs every time the library opens. Adds any Supabase rows missing from
-// localStorage (deduplicates by public_url). Silent on error — never blocks UI.
+// localStorage (deduplicates by public_url). Single batch write — never blocks UI.
 async function syncFromSupabase(): Promise<number> {
   if (!SUPABASE_URL || !SUPABASE_ANON) return 0;
   try {
+    // Only fetch the fields we need — avoids pulling any large fields
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/generated_images?select=*&order=created_at.desc&limit=500`,
+      `${SUPABASE_URL}/rest/v1/generated_images?select=id,public_url,provider,aspect_ratio,resolution,filename,created_at&order=created_at.asc&limit=500`,
       { headers: SB_HEADERS }
     );
     if (!res.ok) return 0;
     const rows = await res.json() as Array<{
       id: string; public_url: string; provider: string; aspect_ratio: string;
-      resolution: string; filename: string; storage_path: string; created_at: string;
+      resolution: string; filename: string; created_at: string;
     }>;
     if (!Array.isArray(rows) || rows.length === 0) return 0;
 
     // Build a set of all URLs already in localStorage so we don't add duplicates
     const existingUrls = new Set(getAllStoredImages().map(i => i.public_url));
 
-    // Process oldest-first so newest ends up at the front after prepending
-    let count = 0;
-    for (const row of [...rows].reverse()) {
-      if (!row.public_url || existingUrls.has(row.public_url)) continue;
-      storeImage({
-        public_url:   row.public_url,
-        provider:     row.provider     || 'chatgpt',
-        aspect_ratio: row.aspect_ratio || '16:9',
-        resolution:   row.resolution   || '1K',
-        filename:     row.filename     || `image-${row.id}.png`,
-      });
-      existingUrls.add(row.public_url); // prevent double-adds within the same batch
-      count++;
-    }
-    return count;
+    // Filter to genuinely new rows (skip data: URIs which can't display as images)
+    const newRows = rows.filter(
+      r => r.public_url && !r.public_url.startsWith('data:') && !existingUrls.has(r.public_url)
+    );
+    if (newRows.length === 0) return 0;
+
+    // Single batch write (one localStorage read + one write) — much faster than 500 individual writes
+    return batchStoreImages(newRows.map(row => ({
+      public_url:   row.public_url,
+      provider:     row.provider     || 'chatgpt',
+      aspect_ratio: row.aspect_ratio || '16:9',
+      resolution:   row.resolution   || '1K',
+      filename:     row.filename     || `image-${row.id}.png`,
+    })));
   } catch {
     return 0; // silent fail — sync is best-effort
   }
