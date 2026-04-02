@@ -57,6 +57,50 @@ function fetchImages(page: number, filter: string): { data: GeneratedImage[]; ha
   return getImages(page, filter) as { data: GeneratedImage[]; hasMore: boolean };
 }
 
+// ── One-time migration: copy old Supabase generated_images → localStorage ──────
+// Runs once per browser (flag stored in localStorage). Silently skips on error.
+const MIGRATION_KEY = 'pg_supabase_migrated_v1';
+
+async function migrateFromSupabase(): Promise<number> {
+  if (!SUPABASE_URL || !SUPABASE_ANON) return 0;
+  if (localStorage.getItem(MIGRATION_KEY)) return 0; // already done
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/generated_images?select=*&order=created_at.desc&limit=500`,
+      { headers: SB_HEADERS }
+    );
+    if (!res.ok) return 0;
+    const rows = await res.json() as Array<{
+      id: string; public_url: string; provider: string; aspect_ratio: string;
+      resolution: string; filename: string; storage_path: string; created_at: string;
+    }>;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      localStorage.setItem(MIGRATION_KEY, '1');
+      return 0;
+    }
+
+    // Import each row into localStorage (storeImage deduplicates by prepending)
+    // Process in reverse so newest ends up at the front
+    let count = 0;
+    for (const row of [...rows].reverse()) {
+      if (!row.public_url) continue;
+      storeImage({
+        public_url:   row.public_url,
+        provider:     row.provider     || 'chatgpt',
+        aspect_ratio: row.aspect_ratio || '16:9',
+        resolution:   row.resolution   || '1K',
+        filename:     row.filename     || `image-${row.id}.png`,
+      });
+      count++;
+    }
+    localStorage.setItem(MIGRATION_KEY, '1');
+    return count;
+  } catch {
+    return 0; // silent fail — migration is best-effort
+  }
+}
+
 async function fetchFavorites(brandFilter: string): Promise<{ data: GeneratedImage[]; hasMore: boolean }> {
   let query = `liked_images?select=*&order=created_at.desc`;
   if (brandFilter !== 'all') query += `&brand_name=eq.${encodeURIComponent(brandFilter)}`;
