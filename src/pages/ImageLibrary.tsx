@@ -1342,7 +1342,7 @@ function ImageCard({
           alt={image.filename || 'image'}
           loading={priority ? 'eager' : 'lazy'}
           decoding="async"
-          fetchPriority={priority ? 'high' : 'low'}
+          fetchPriority={priority ? 'high' : 'auto'}
           className={`w-full h-full object-cover rounded-2xl transition-all duration-300 group-hover:scale-[1.03] ${loaded ? 'opacity-100' : 'opacity-0'}`}
           onLoad={() => setLoaded(true)}
           onError={() => { setErrored(true); setLoaded(true); }}
