@@ -448,8 +448,8 @@ export function ImageModal({
 
   // Human-readable description of what the AI changes for each mode
   const variationModeDescription = {
-    subtle: 'Kept: subject, pose, composition. Changed: lighting warmth, color temperature, atmospheric mood.',
-    strong: 'Kept: main subject & outfit. Changed: background environment, lighting color, overall palette & mood.',
+    subtle: 'Brand colors locked. Changed: camera angle & subject pose — composition varies while palette stays identical.',
+    strong: 'Brand colors locked. Changed: subject pose, background details & overall composition — bolder creative differences.',
   };
 
   return (
