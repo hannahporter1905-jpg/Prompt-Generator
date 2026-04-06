@@ -2,21 +2,24 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // ── Generate Image Variations via Gemini Native Image Generation ─────────────
 //
-// Uses Gemini's native image generation (generateContent with image output).
-// Gemini sees the FULL image and generates a completely new variation.
-//
-// SPECTRUM APPROACH (v2):
+// SPECTRUM APPROACH (v3 — brand color lock):
 //   Generates 4 variations using 4 DIFFERENT prompts at increasing creative levels,
-//   each paired with an appropriate temperature value:
+//   each paired with an appropriate temperature value.
 //
-//   Tier 1 — Color Grade:    temp 0.3  — almost identical, just color grade shift
-//   Tier 2 — Lighting:       temp 0.5  — same composition, different light/mood
-//   Tier 3 — Composition:    temp 0.8  — different angle/layout, same subject
-//   Tier 4 — Reimagine:      temp 1.0  — fresh execution, same brand/concept
+//   The #1 problem with v2 was color drift — Gemini generates from scratch so
+//   without a very strong color lock, it drifts to its own preferred palette.
 //
-//   Mode controls which tiers are used:
-//     subtle → T1, T1, T2, T2  (conservative spread)
-//     strong → T2, T3, T3, T4  (creative spread)
+//   Fix:
+//     1. COLOR LOCK is the first and most emphatic rule in every prompt
+//     2. Explicit brand palette names so Gemini knows the exact colors to use
+//     3. Temperatures lowered (max 0.75) — Gemini is more sensitive than OpenAI
+//     4. Tier prompts only describe structural changes, never color changes
+//
+//   Tier summary:
+//     T1 — Composition angle: different camera angle, same colors
+//     T2 — Subject pose:      different pose/expression, same colors
+//     T3 — Background detail: fresh background arrangement, same colors
+//     T4 — Creative:          new composition energy, same brand colors
 //
 // Auth flow:
 //   Vercel OIDC token → Google STS federated token → SA access token → Vertex AI
@@ -43,7 +46,6 @@ async function getServiceAccountAccessToken(req: VercelRequest): Promise<string>
     );
   }
 
-  // Step 1: Vercel OIDC → Google federated access token
   const stsRes = await fetch('https://sts.googleapis.com/v1/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -61,7 +63,6 @@ async function getServiceAccountAccessToken(req: VercelRequest): Promise<string>
   }
   const { access_token: federatedToken } = await stsRes.json();
 
-  // Step 2: Federated token → short-lived SA access token
   const saRes = await fetch(
     `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${serviceAccount}:generateAccessToken`,
     {
@@ -94,81 +95,125 @@ function getProjectNumber(): string {
 }
 
 // ------------------------------------------------------------------
-// Build a SPECTRUM of 4 prompts for Gemini.
+// Known brand color palettes — explicit colors prevent Gemini from guessing.
+// ------------------------------------------------------------------
+const BRAND_PALETTES: Record<string, string> = {
+  fortuneplay: 'rich gold, warm amber, deep bronze, warm orange glow — luxurious golden casino aesthetic',
+  spinjo:      'vibrant purple, electric blue, silver chrome, neon purple-blue energy',
+  roosterbet:  'deep crimson red, warm gold accents, dark rich backgrounds with red highlights',
+  luckyvibe:   'emerald green, bright gold, vivid neon green-and-gold energy',
+  spinsup:     'royal blue, silver, electric white, clean dynamic energy',
+};
+
+function getBrandColorDescription(brand: string): string {
+  const key = brand.toLowerCase().replace(/\s+/g, '');
+  return BRAND_PALETTES[key] || '';
+}
+
+// ------------------------------------------------------------------
+// COLOR LOCK — first and most emphatic rule in every Gemini prompt.
+// Gemini generates from scratch so this must be extremely explicit.
+// ------------------------------------------------------------------
+function buildColorLock(brand: string): string {
+  const knownColors = brand ? getBrandColorDescription(brand) : '';
+
+  if (knownColors) {
+    return (
+      `⚠️ COLOR LOCK — ABSOLUTE RULE #1, NEVER VIOLATE: ` +
+      `This image belongs to the ${brand} brand. ` +
+      `The required dominant color palette is: ${knownColors}. ` +
+      `You MUST use these EXACT colors for the background, lighting, atmosphere, and overall mood. ` +
+      `NEVER use cool blues, purples, dark moody/grey tones, or any color that conflicts with this palette. ` +
+      `If the source image is warm and golden, every pixel of the variation must also reflect warm golden tones. ` +
+      `Clothing and outfit colors on the subject must remain exactly as shown in the source image.`
+    );
+  }
+
+  return (
+    `⚠️ COLOR LOCK — ABSOLUTE RULE #1, NEVER VIOLATE: ` +
+    `Study the dominant color palette in the source image very carefully before generating. ` +
+    `Identify the key colors: the background tones, lighting color, and atmospheric palette. ` +
+    `You MUST replicate those exact dominant colors in the variation. ` +
+    `Do NOT introduce new dominant colors not prominent in the source. ` +
+    `Clothing and outfit colors on the subject must remain exactly as shown in the source image.`
+  );
+}
+
+// ------------------------------------------------------------------
+// Build the spectrum of 4 prompts + temperatures for Gemini.
 //
-// Gemini generates images from scratch (not inpainting like OpenAI edits),
-// so the prompts include a "CRITICAL: generate a FULL NEW IMAGE" instruction.
-// Each prompt is kept concise (3-4 sentences) to avoid contradictions.
-// Temperature is paired per tier for natural progression.
+// KEY CHANGES from v2:
+//   - COLOR LOCK is the very first line of every prompt
+//   - Max temperature is 0.75 (was 1.0) — Gemini drifts much more at high temps
+//   - Tier prompts only allow structural changes, never color changes
+//   - T2 no longer suggests "cooler studio light" — only direction/softness
 // ------------------------------------------------------------------
 function buildGeminiPromptSpectrum(
   mode: string,
   guidance: string,
   brand: string
 ): Array<{ prompt: string; temperature: number }> {
-  // One-sentence brand rule
-  const brandRule = brand
-    ? `Preserve "${brand}" brand colors in the background and lighting; keep the subject's clothing/outfit colors exactly as in the original.`
-    : 'Preserve the exact color palette and visual style of the original image.';
-
-  const criticalRule = 'CRITICAL: Generate a FULL NEW IMAGE at the same dimensions and aspect ratio as the reference. Do NOT crop, zoom, or just filter the input — create a genuinely new image.';
+  const colorLock    = buildColorLock(brand);
+  const criticalRule = 'CRITICAL: Generate a FULL NEW IMAGE at the same dimensions and aspect ratio as the source. Do NOT crop, zoom, or filter the input — create a genuinely new image.';
   const qualityRule  = 'Photorealistic, high detail, no text, no logos. Match or exceed original quality.';
+  const guidanceSuffix = guidance ? ` User direction: ${guidance}.` : '';
 
-  const guidanceSuffix = guidance ? ` Creative direction: ${guidance}` : '';
-
-  // T1 — Color Grade only (temp 0.3)
+  // T1 — Camera angle / perspective (temp 0.25)
   const t1 = {
     prompt: [
-      'Generate a NEW image that is a subtle color-grade variation of the reference image.',
+      colorLock,
       criticalRule,
-      brandRule,
-      'Keep the exact composition, subject, pose, and all elements identical. Only shift the overall warmth, color temperature, or tonal balance — like applying a different photo filter.',
+      'Generate a NEW image that is a variation of the reference, with a slightly different camera angle or framing.',
+      'Keep the exact same subject, lighting color, color palette, and all visual elements.',
+      'Only change: the viewing angle or how the subject is framed in the shot.',
       qualityRule,
     ].join(' ') + guidanceSuffix,
-    temperature: 0.3,
+    temperature: 0.25,
   };
 
-  // T2 — Lighting & Atmosphere (temp 0.5)
+  // T2 — Subject pose / expression (temp 0.4)
   const t2 = {
     prompt: [
-      'Generate a NEW image that is a lighting variation of the reference image.',
+      colorLock,
       criticalRule,
-      brandRule,
-      'Keep the same composition and subject position. Change the lighting direction, intensity, or time-of-day feel — warmer golden-hour light, cooler studio light, or softer diffused light.',
+      'Generate a NEW image that is a variation of the reference, where the subject has a different pose or expression.',
+      'Keep the exact same background, lighting color, color palette, and brand aesthetic.',
+      'Only change: the subject\'s pose, stance, or facial expression.',
       qualityRule,
     ].join(' ') + guidanceSuffix,
-    temperature: 0.5,
+    temperature: 0.4,
   };
 
-  // T3 — Composition Shift (temp 0.8)
+  // T3 — Background detail variation (temp 0.6)
   const t3 = {
     prompt: [
-      'Generate a NEW image that is a composition variation of the reference image.',
+      colorLock,
       criticalRule,
-      brandRule,
-      'Keep the same subject, brand theme, and overall concept. Adjust the camera angle, subject positioning, or background arrangement — a different but equally compelling layout.',
+      'Generate a NEW image that is a variation of the reference, with refreshed background details.',
+      'Keep the same subject, subject pose, lighting color, and color palette.',
+      'Only change: background elements and arrangement — same dominant colors but different background details.',
       qualityRule,
     ].join(' ') + guidanceSuffix,
-    temperature: 0.8,
+    temperature: 0.6,
   };
 
-  // T4 — Creative Reimagining (temp 1.0)
+  // T4 — Creative alternate (temp 0.75)
   const t4 = {
     prompt: [
-      'Using the reference image as inspiration, generate a COMPLETELY NEW IMAGE that is a fresh creative variation.',
+      colorLock,
       criticalRule,
-      brandRule,
-      'Same brand and general concept, completely new execution. Reimagine the subject pose, expression, and background. It should feel like an alternate version a professional designer created — same campaign, fresh energy.',
+      'Generate a NEW image that is a fresh creative alternate version of the reference — same brand concept, different composition.',
+      'The color palette and brand aesthetic MUST match the source exactly.',
+      'Change: the overall layout, subject pose, and background composition. Keep brand colors absolute.',
       qualityRule,
     ].join(' ') + guidanceSuffix,
-    temperature: 1.0,
+    temperature: 0.75,
   };
 
   // Mode → tier selection
   if (mode === 'subtle') {
     return [t1, t1, t2, t2];
   }
-  // strong
   return [t2, t3, t3, t4];
 }
 
@@ -211,12 +256,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const b64Image = Buffer.from(imgArrayBuffer).toString('base64');
 
     // ------------------------------------------------------------------
-    // 2. Build the spectrum of prompts + temperatures
+    // 2. Build spectrum prompts + temperatures
     // ------------------------------------------------------------------
     const numVariations = Math.min(Number(count) || 4, 4);
     const spectrum = buildGeminiPromptSpectrum(mode, guidance, brand).slice(0, numVariations);
 
-    console.log(`[generate-variations-gemini] mode=${mode}, generating ${numVariations} tiered variations`);
+    console.log(`[generate-variations-gemini] mode=${mode}, brand=${brand}, generating ${numVariations} tiered variations`);
 
     // ------------------------------------------------------------------
     // 3. Authenticate with GCP
