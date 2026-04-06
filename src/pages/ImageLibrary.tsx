@@ -910,8 +910,8 @@ function Lightbox({
                     </div>
                     <p className="text-white/30 text-[10px] leading-relaxed">
                       {variationType === 'subtle'
-                        ? 'Same composition & subject — slight lighting, color & mood adjustments.'
-                        : 'Same subject, reimagined background, lighting, palette & atmosphere.'}
+                        ? 'Brand colors locked — varies camera angle & pose only.'
+                        : 'Brand colors locked — varies pose, background & composition.'}
                     </p>
 
                     {/* Engine selector: ChatGPT / Gemini / Both */}
