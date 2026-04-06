@@ -229,11 +229,15 @@ export function ImageModal({
     setVariationElapsed(0);
     variationIntervalRef.current = setInterval(() => setVariationElapsed(p => p + 1), 1000);
 
+    // In Compare mode (both engines) request 2 per engine → 4 total.
+    // In single-engine mode request 4 → gives a full spectrum of variation tiers.
+    const variationCount = selectedEngine === 'compare' ? 2 : 4;
+
     const body = JSON.stringify({
       imageUrl: srcUrl,
       mode: variationType,
       guidance: variationInstructions.trim(),
-      count: 2,
+      count: variationCount,
       resolution,
       brand: brand || '',
     });
