@@ -551,7 +551,7 @@ export function ImageModal({
                     <button
                       type="button"
                       onClick={() => setVariationType('strong')}
-                      title="Strong — reimagine background & palette, keep subject & outfit"
+                      title="Strong — brand colors locked; varies pose, background detail & composition"
                       className={`px-2.5 py-1 rounded font-medium transition-all ${variationType === 'strong' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                     >Strong</button>
                   </div>
