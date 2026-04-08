@@ -40,6 +40,8 @@ interface ImageModalProps {
   // Variations generated in a previous open session — restored when modal reopens
   persistedVariations?: GalleryImage[];
   onVariationsChange?: (variations: GalleryImage[]) => void;
+  // When true, show a second download button that flips the image horizontally (Arabic RTL copy)
+  mirrorArabic?: boolean;
 }
 
 export function ImageModal({
