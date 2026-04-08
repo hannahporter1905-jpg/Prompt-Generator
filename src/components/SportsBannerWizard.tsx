@@ -32,7 +32,7 @@ import {
 } from './sports-wizard/scene-presets';
 
 type Props = {
-  onSubmit: (data: Partial<FormData>, mirrorArabic: boolean) => void;
+  onSubmit: (data: Partial<FormData>) => void;
 };
 
 const STEP_LABELS = [
