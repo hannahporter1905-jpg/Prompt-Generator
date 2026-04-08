@@ -49,7 +49,8 @@ function AspectPreview({ ratio, selected }: { ratio: number; selected: boolean }
   );
 }
 
-export function BannerSizeSelect({ bannerSizeId, occasion, mirrorArabic, onChange, onMirrorArabicChange }: Props) {
+export function BannerSizeSelect({ bannerSizeId, occasion, mirrorArabic, subjectPosition, onChange, onMirrorArabicChange }: Props) {
+  const { flippedPosition, isCentered } = getMirrorInfo(subjectPosition || 'Centered');
   const [customOccasion, setCustomOccasion] = useState('');
   const [showCustomOccasion, setShowCustomOccasion] = useState(false);
   const [customWidth, setCustomWidth] = useState('');
