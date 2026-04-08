@@ -11,10 +11,12 @@ import { SportsBannerData } from '@/types/prompt';
 type Props = {
   bannerSizeId: string;
   occasion: string;
+  mirrorArabic: boolean;
   onChange: (
     field: keyof Pick<SportsBannerData, 'bannerSizeId' | 'bannerSizeLabel' | 'bannerDimensions' | 'aspectRatio' | 'occasion' | 'occasionMood'>,
     value: string
   ) => void;
+  onMirrorArabicChange: (value: boolean) => void;
 };
 
 function AspectPreview({ ratio, selected }: { ratio: number; selected: boolean }) {
