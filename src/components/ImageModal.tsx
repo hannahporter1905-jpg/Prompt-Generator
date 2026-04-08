@@ -59,7 +59,6 @@ export function ImageModal({
   brand,
   persistedVariations = [],
   onVariationsChange,
-  mirrorArabic = false,
 }: ImageModalProps) {
   const isGallery = allImages && allImages.length > 0;
 
