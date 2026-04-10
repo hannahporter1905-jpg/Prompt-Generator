@@ -106,32 +106,78 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       console.log('Sending to Cloud Run:', { provider, aspectRatio, resolution });
 
-      const response = await fetch(`${cloudRunUrl}/generate-image`, {
-        method: 'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          prompt,
-          provider,
-          aspectRatio: aspectRatio || '1:1',
-          resolution:  resolution  || '1K',
-        }),
-      });
+      // Retry helper — tries the Cloud Run call up to `maxAttempts` times.
+      // Retries on network timeout or 5xx server errors. Gives up on 4xx (bad request).
+      const TIMEOUT_MS   = 120_000; // 2 minutes — image generation can be slow
+      const MAX_ATTEMPTS = 2;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Cloud Run error:', response.status, errorText);
-        return res.status(500).json({
-          error: `Cloud Run failed (${response.status}): ${errorText || 'No details returned'}`
-        });
+      let lastError: string = 'Unknown error';
+
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        // AbortController lets us cancel the fetch if it takes too long
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+        try {
+          const response = await fetch(`${cloudRunUrl}/generate-image`, {
+            method: 'POST',
+            headers: {
+              'Content-Type':  'application/json',
+              'Authorization': `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({
+              prompt,
+              provider,
+              aspectRatio: aspectRatio || '1:1',
+              resolution:  resolution  || '1K',
+            }),
+            signal: controller.signal,
+          });
+
+          clearTimeout(timer);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Cloud Run error (attempt ${attempt}):`, response.status, errorText);
+
+            // 4xx = bad request — retrying won't help, fail immediately
+            if (response.status >= 400 && response.status < 500) {
+              return res.status(500).json({
+                error: `Cloud Run failed (${response.status}): ${errorText || 'No details returned'}`
+              });
+            }
+
+            // 5xx = server error — record it and retry
+            lastError = `Cloud Run failed (${response.status}): ${errorText || 'No details returned'}`;
+            continue;
+          }
+
+          const data = await response.json();
+          console.log('Cloud Run response:', JSON.stringify(data));
+          const result = Array.isArray(data) ? data[0] : data;
+          return res.status(200).json(result);
+
+        } catch (fetchError: unknown) {
+          clearTimeout(timer);
+
+          // AbortError = our timeout fired — the request took too long
+          const isTimeout =
+            fetchError instanceof Error && fetchError.name === 'AbortError';
+
+          if (isTimeout) {
+            console.error(`Cloud Run timed out after ${TIMEOUT_MS / 1000}s (attempt ${attempt})`);
+            lastError = `Cloud Run did not respond within ${TIMEOUT_MS / 1000} seconds`;
+          } else {
+            console.error(`Cloud Run network error (attempt ${attempt}):`, fetchError);
+            lastError = fetchError instanceof Error ? fetchError.message : 'Network error';
+          }
+
+          // If this was the last attempt, fall through to the error response below
+        }
       }
 
-      const data = await response.json();
-      console.log('Cloud Run response:', JSON.stringify(data));
-      const result = Array.isArray(data) ? data[0] : data;
-      return res.status(200).json(result);
+      // All attempts exhausted
+      return res.status(500).json({ error: lastError });
     }
 
     // Cloud Run is the only supported backend
