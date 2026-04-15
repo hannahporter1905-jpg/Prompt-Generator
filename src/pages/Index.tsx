@@ -216,7 +216,11 @@ const Index = () => {
                   Switching back to Custom Prompt preserves form/result state intact. */}
               {activeTab === 'wizard' && !showProcessing && (
                 <SportsBannerWizard
+                  wizardState={wizardState}
+                  brand={wizardBrand}
+                  onBrandChange={setWizardBrand}
                   onSubmit={(data) => {
+                    setLastGenerationSource('wizard');
                     handleTabChange('form'); // switch to Custom Prompt tab to show the result
                     handleSubmitWithData(data as Partial<FormData>);
                   }}
