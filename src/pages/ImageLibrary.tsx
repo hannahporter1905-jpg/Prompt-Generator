@@ -65,7 +65,7 @@ async function syncFromSupabase(): Promise<number> {
   try {
     // Only fetch the fields we need — avoids pulling any large fields
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/generated_images?select=id,public_url,provider,aspect_ratio,resolution,filename,created_at&order=created_at.asc&limit=500`,
+      `${SUPABASE_URL}/rest/v1/generated_images?select=id,public_url,provider,aspect_ratio,resolution,filename,created_at&order=created_at.desc&limit=500`,
       { headers: SB_HEADERS }
     );
     if (!res.ok) return 0;
