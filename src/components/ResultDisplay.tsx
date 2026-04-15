@@ -85,7 +85,7 @@ export function ResultDisplay({
 
   // Resolution and backend selection for image generation
   type Resolution = "1K" | "2K" | "3K" | "4K";
-  const [resolution, setResolution] = useState<Resolution>("1K");
+  const [resolution, setResolution] = useState<Resolution>("2K");
 
   // Create blended prompt dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
