@@ -138,7 +138,7 @@ function StepTip({ message }: { message: string }) {
 // Main component
 // ─────────────────────────────────────────────
 
-export function SportsBannerWizard({ onSubmit }: Props) {
+export function SportsBannerWizard({ onSubmit, wizardState, brand, onBrandChange }: Props) {
   const {
     step,
     wizardData,
@@ -149,9 +149,9 @@ export function SportsBannerWizard({ onSubmit }: Props) {
     resetWizard,
     canAdvance,
     assembleFormData,
-  } = useSportsBannerWizard();
+  } = wizardState;
 
-  const [brand, setBrand] = useState('');
+  const setBrand = onBrandChange;
 
   // When brand changes → auto-fill the lighting tone to match brand palette.
   // The user can change it at any time on step 3.
