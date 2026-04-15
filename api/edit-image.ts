@@ -235,7 +235,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ── Primary: OpenAI direct edit ────────────────────────────────────
     if (process.env.OPENAI_API_KEY) {
       console.log('[edit-image] Using OpenAI direct edit');
-      const result = await editViaOpenAI(imgArrayBuffer, mimeType, editInstructions);
+      const result = await editViaOpenAI(imgArrayBuffer, mimeType, editInstructions, resolution);
       return res.status(200).json({
         success: true,
         imageUrl: result.imageUrl,
