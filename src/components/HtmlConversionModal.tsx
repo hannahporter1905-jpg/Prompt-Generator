@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Eye, FileCode, AlignLeft, AlignRight } from 'lucide-react';
+import { Download, Eye, FileCode, AlignLeft, AlignRight, Loader2 } from 'lucide-react';
 import { getBrandStyle } from '@/lib/brand-standards';
 
 interface HtmlConversionModalProps {
@@ -29,6 +29,25 @@ interface BannerFormData {
 
 type TextPosition = 'left' | 'right';
 
+// Fetches an image URL and returns it as a base64 data URI so the
+// downloaded HTML file works everywhere — no blob URLs, no broken images.
+async function toBase64DataUri(url: string): Promise<string> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return url;
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => reject(url);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    // CORS or network failure — fall back to the original URL
+    return url;
+  }
+}
+
 export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlConversionModalProps) {
   const [formData, setFormData] = useState<BannerFormData>({
     welcomeBonus: '',
@@ -39,17 +58,20 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
   });
   const [textPosition, setTextPosition] = useState<TextPosition>('right');
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (field: keyof BannerFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const buildHtml = (): string => {
+  // Builds the final HTML string.
+  // imageSrc is already a base64 data URI so the file is self-contained.
+  const buildHtml = (imageSrc: string): string => {
     const style = getBrandStyle(brand);
 
-    // 'right' → image left, text right → flex-row (image first in DOM)
-    // 'left'  → text left, image right → flex-row-reverse (image first in DOM, reversed visually)
+    // 'right' → image LEFT, text RIGHT  → image comes first in DOM, flex-row
+    // 'left'  → text LEFT, image RIGHT  → image comes first in DOM, flex-row-reverse
     const flexDirection = textPosition === 'right' ? 'row' : 'row-reverse';
 
     const googleFontsUrl = `https://fonts.googleapis.com/css2?family=${style.googleFont}&display=swap`;
@@ -86,13 +108,13 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
       box-shadow: 0 8px 48px rgba(0,0,0,0.7);
     }
 
-    /* Mobile: always stack image on top, text below */
+    /* Mobile: stack image on top, text below */
     @media (max-width: 600px) {
       .banner { flex-direction: column; }
       .banner__image { min-height: 220px; flex: 0 0 auto; }
     }
 
-    /* ── Image panel (45%) ── */
+    /* ── Image panel (45%) — bleeds edge to edge, no padding ── */
     .banner__image {
       flex: 0 0 45%;
       min-height: 320px;
@@ -106,7 +128,7 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
       display: block;
     }
 
-    /* ── Text panel (55%) ── */
+    /* ── Text / offer panel (55%) ── */
     .banner__text {
       flex: 0 0 55%;
       background: ${style.panelBg};
@@ -114,10 +136,10 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
       flex-direction: column;
       justify-content: center;
       padding: 40px 44px;
-      gap: 10px;
+      gap: 12px;
     }
 
-    /* Brand name — small label at top */
+    /* Small brand label at the top */
     .banner__brand {
       font-family: ${style.fontFamily};
       font-size: 10px;
@@ -125,37 +147,36 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
       color: ${style.accentColor};
       letter-spacing: 0.28em;
       text-transform: uppercase;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
 
-    /* Offer row: huge number + "FREE SPINS" side by side on the same baseline */
-    .banner__offer {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-      line-height: 1;
-    }
+    /* ── Offer block: number stacked above type label ── */
 
+    /* The dominant visual — huge bold number e.g. "20" or "$5" */
     .banner__number {
       font-family: ${style.fontFamily};
-      font-size: clamp(64px, 9vw, 96px);
+      font-size: clamp(72px, 10vw, 104px);
       font-weight: 900;
       color: ${style.headlineColor};
-      line-height: 1;
+      line-height: 0.95;
       letter-spacing: -0.03em;
+      display: block;
     }
 
+    /* "FREE SPINS" — sits directly below the number */
     .banner__type {
       font-family: ${style.fontFamily};
-      font-size: clamp(18px, 2.5vw, 28px);
+      font-size: clamp(20px, 3vw, 32px);
       font-weight: 800;
       color: ${style.headlineColor};
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      line-height: 1.1;
+      letter-spacing: 0.06em;
+      line-height: 1;
+      display: block;
+      margin-top: 4px;
     }
 
-    /* "NO DEPOSIT BONUS" qualifier */
+    /* "NO DEPOSIT BONUS" — smaller faded qualifier */
     .banner__descriptor {
       font-family: ${style.fontFamily};
       font-size: 11px;
@@ -164,7 +185,7 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
       letter-spacing: 0.22em;
       text-transform: uppercase;
       opacity: 0.65;
-      margin-top: -2px;
+      margin-top: 2px;
     }
 
     /* "+ X% BONUS" accent line */
@@ -176,28 +197,28 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
       letter-spacing: 0.02em;
     }
 
-    /* ── CTA Button ── full-width, flat rounded rect (not pill) */
+    /* ── CTA Button — full-width, flat rounded rect (not pill) ── */
     .banner__cta {
       display: block;
+      width: 100%;
       background: ${style.buttonBg};
       color: ${style.buttonText};
       font-family: ${style.fontFamily};
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 800;
       text-decoration: none;
       text-align: center;
-      padding: 15px 24px;
+      padding: 16px 24px;
       border-radius: 7px;
       text-transform: uppercase;
       letter-spacing: 0.14em;
-      margin-top: 8px;
-      max-width: 260px;
+      margin-top: 10px;
       cursor: pointer;
       transition: opacity 0.15s ease;
     }
 
     .banner__cta:hover {
-      opacity: 0.88;
+      opacity: 0.85;
     }
 
     /* Bonus code — tiny faded text below button */
@@ -210,26 +231,25 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
       text-transform: uppercase;
       opacity: 0.4;
       margin-top: 2px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
   <div class="banner">
 
-    <!-- Image panel (bleeds to edge, no padding) -->
+    <!-- Image panel — base64-embedded so the file is fully self-contained -->
     <div class="banner__image">
-      <img src="${imageUrl}" alt="${brand || 'Casino'} promotional banner" />
+      <img src="${imageSrc}" alt="${brand || 'Casino'} promotional banner" />
     </div>
 
     <!-- Text / offer panel -->
     <div class="banner__text">
       ${brand ? `<p class="banner__brand">${brand}</p>` : ''}
 
-      <!-- Dominant offer: huge number + "FREE SPINS" on same baseline -->
-      <div class="banner__offer">
-        <span class="banner__number">${formData.welcomeBonus}</span>
-        <span class="banner__type">Free<br>Spins</span>
-      </div>
+      <!-- Dominant offer: huge number, then "FREE SPINS" stacked below it -->
+      <span class="banner__number">${formData.welcomeBonus}</span>
+      <span class="banner__type">Free Spins</span>
 
       <p class="banner__descriptor">No Deposit Bonus</p>
       ${formData.bonusPercentage ? `<p class="banner__bonus">+ ${formData.bonusPercentage}% Bonus</p>` : ''}
@@ -243,13 +263,23 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
 </html>`;
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setError(null);
     if (!formData.welcomeBonus.trim()) {
       setError('Please enter the number of free spins.');
       return;
     }
-    setGeneratedHtml(buildHtml());
+    setIsGenerating(true);
+    try {
+      // Convert the image to a base64 data URI before building the HTML.
+      // This ensures the downloaded file renders the image everywhere.
+      const imageSrc = await toBase64DataUri(imageUrl);
+      setGeneratedHtml(buildHtml(imageSrc));
+    } catch {
+      setError('Failed to embed the image. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleDownload = () => {
@@ -297,22 +327,10 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
           <>
             <div className="space-y-4 py-4">
 
-              {/* Text Position toggle */}
+              {/* Image position toggle */}
               <div className="space-y-2">
-                <Label>Text Position</Label>
+                <Label>Image Position</Label>
                 <div className="inline-flex rounded-lg bg-muted p-1 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setTextPosition('left')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                      textPosition === 'left'
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <AlignLeft className="w-3.5 h-3.5" />
-                    Text Left
-                  </button>
                   <button
                     type="button"
                     onClick={() => setTextPosition('right')}
@@ -322,8 +340,20 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
+                    <AlignLeft className="w-3.5 h-3.5" />
+                    Image Left
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTextPosition('left')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      textPosition === 'left'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
                     <AlignRight className="w-3.5 h-3.5" />
-                    Text Right
+                    Image Right
                   </button>
                 </div>
               </div>
@@ -385,9 +415,12 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button onClick={handleGenerate} className="gradient-primary gap-2">
-                <FileCode className="w-4 h-4" />
-                Generate HTML
+              <Button onClick={handleGenerate} className="gradient-primary gap-2" disabled={isGenerating}>
+                {isGenerating ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Embedding image…</>
+                ) : (
+                  <><FileCode className="w-4 h-4" /> Generate HTML</>
+                )}
               </Button>
             </DialogFooter>
           </>
@@ -399,7 +432,7 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
               </div>
               <p className="text-foreground font-medium mb-1">HTML Banner Ready</p>
               <p className="text-sm text-muted-foreground">
-                Image {textPosition === 'right' ? 'left' : 'right'} · {brand || 'Generic'} brand styles applied
+                Image {textPosition === 'right' ? 'left' : 'right'} · {brand || 'Generic'} · image embedded
               </p>
             </div>
 
