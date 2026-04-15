@@ -264,6 +264,8 @@ const Index = () => {
                       onSave={handleSave}
                       onDontSave={handleDontSave}
                       onEditForm={handleEditForm}
+                      onEditWizard={handleEditWizard}
+                      lastGenerationSource={lastGenerationSource}
                       onGenerateAgain={handleGenerateAgain}
                       onClearForm={handleClearFormWithReference}
                       onPromptChange={handlePromptChange}
