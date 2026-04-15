@@ -1,5 +1,40 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// ------------------------------------------------------------------
+// Brand-specific mandatory style rules.
+// These are injected into EVERY prompt for the matching brand so the
+// image model cannot ignore them. Use strong, imperative language.
+// ------------------------------------------------------------------
+const BRAND_STYLES: Record<string, string> = {
+  roosterbet:
+    '[MANDATORY BRAND SIGNATURE — DO NOT OMIT] ' +
+    'Intense fire elements and flames MUST be clearly visible throughout the scene. ' +
+    'Flames, embers, and fiery glow are NON-NEGOTIABLE regardless of the outfit, sport, or match depicted. ' +
+    'The fire must feel dramatic and integrated into the composition — not a subtle overlay.',
+  fortuneplay:
+    '[MANDATORY BRAND SIGNATURE — DO NOT OMIT] ' +
+    'Luxurious aesthetics are required: prominent gold accents, warm gold lighting, and floating gold dust particles ' +
+    'MUST be visible in the scene. Every surface should catch golden light. ' +
+    'The overall mood must feel opulent, rich, and premium — gold is the defining visual element.',
+  luckyvibe:
+    '[MANDATORY BRAND SIGNATURE — DO NOT OMIT] ' +
+    'Sunset lighting is required with a warm beach-like environment. ' +
+    'Sand MUST be visibly integrated into the scene — even if the setting is a grass stadium, sand must be present. ' +
+    'Palm trees MUST appear in the background. The atmosphere should feel tropical and vibrant.',
+};
+
+/**
+ * Enriches a raw user prompt with brand-mandatory style rules.
+ * The brand rules are prepended so the model sees them FIRST (highest priority).
+ */
+function enrichPromptWithBrandStyle(prompt: string, brand: string): string {
+  if (!brand) return prompt;
+  const key = brand.toLowerCase().replace(/\s+/g, '');
+  const style = BRAND_STYLES[key];
+  if (!style) return prompt;
+  return `${style}\n\n${prompt}`;
+}
+
 /**
  * Authenticates to Cloud Run using Vercel Workload Identity Federation (WIF).
  *
