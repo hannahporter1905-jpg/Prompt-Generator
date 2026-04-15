@@ -359,6 +359,16 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="ctaText">Button Text</Label>
+                <Input
+                  id="ctaText"
+                  placeholder="e.g. Play Now"
+                  value={formData.ctaText}
+                  onChange={(e) => handleInputChange('ctaText', e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="ctaUrl">CTA Link URL</Label>
                 <Input
                   id="ctaUrl"
