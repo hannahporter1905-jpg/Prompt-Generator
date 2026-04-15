@@ -275,7 +275,7 @@ Examples:
 - Explain decisions in plain English
 - Small changes, one at a time, test between each
 - Preserve ALL existing functionality
-- **Always auto-commit and push every code change** (see feedback_autocommit.md)
+- **Never auto-commit or auto-deploy** — after changes, propose a commit message and wait for user approval. Saves tokens by avoiding unnecessary git operations.
 
 ### Don't
 - **Don't hardcode prompt data**
