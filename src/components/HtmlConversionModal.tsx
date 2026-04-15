@@ -35,6 +35,7 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
     bonusPercentage: '',
     bonusCode: '',
     ctaUrl: '#',
+    ctaText: 'Play Now',
   });
   const [textPosition, setTextPosition] = useState<TextPosition>('right');
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
