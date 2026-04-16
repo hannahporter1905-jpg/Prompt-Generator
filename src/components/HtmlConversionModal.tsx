@@ -403,155 +403,201 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
 
   const cfg = OFFER_CONFIG[offerType];
 
+  // Offer type cards config — icon + example shown in the selector
+  const OFFER_CARDS: Record<OfferType, { icon: string; example: string }> = {
+    freespins: { icon: '🎰', example: 'e.g. 20, 50, 100' },
+    bonus:     { icon: '💰', example: 'e.g. 400% up to $4k' },
+    nodeposit: { icon: '🎁', example: 'e.g. $5, €10' },
+    freebet:   { icon: '🎲', example: 'e.g. $50 free bet' },
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileCode className="w-5 h-5" />
-            Convert to HTML Banner
+      {/* Wider dialog so the two-column form layout has room */}
+      <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden">
+
+        {/* ── Header ── */}
+        <div className="flex items-center gap-2.5 px-6 pt-5 pb-4 border-b border-border">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <FileCode className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold leading-tight">Convert to HTML Banner</h2>
             {brand && (
-              <span className="text-xs font-normal text-muted-foreground ml-1">· {brand}</span>
+              <p className="text-xs text-muted-foreground mt-0.5">{brand}</p>
             )}
-          </DialogTitle>
-        </DialogHeader>
+          </div>
+        </div>
 
         {!generatedHtml ? (
-          <>
-            <div className="space-y-4 py-2">
+          <div className="flex gap-0 min-h-0">
 
-              {/* ── Text position ── */}
-              <div className="space-y-2">
-                <Label>Text Position</Label>
-                <div className="inline-flex rounded-lg bg-muted p-1 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setTextPosition('left')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                      textPosition === 'left'
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <AlignLeft className="w-3.5 h-3.5" />
-                    Text Left
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTextPosition('right')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                      textPosition === 'right'
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <AlignRight className="w-3.5 h-3.5" />
-                    Text Right
-                  </button>
-                </div>
-              </div>
+            {/* ════════════════════════════════════
+                LEFT COLUMN — form fields
+            ════════════════════════════════════ */}
+            <div className="flex-1 px-6 py-5 space-y-5 overflow-y-auto max-h-[80vh]">
 
-              {/* ── Offer type ── */}
+              {/* ── 1. Text position ── */}
               <div className="space-y-2">
-                <Label>Offer Type</Label>
-                <div className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
-                  {(Object.keys(OFFER_CONFIG) as OfferType[]).map((type) => (
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Text Position
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['left', 'right'] as TextPosition[]).map((pos) => (
                     <button
-                      key={type}
+                      key={pos}
                       type="button"
-                      onClick={() => setOfferType(type)}
-                      className={`px-2 py-1.5 rounded-md text-xs font-medium transition-all ${
-                        offerType === type
-                          ? 'bg-background text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
+                      onClick={() => setTextPosition(pos)}
+                      className={`flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                        textPosition === pos
+                          ? 'border-primary bg-primary/10 text-foreground'
+                          : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/40 hover:text-foreground'
                       }`}
                     >
-                      {OFFER_CONFIG[type].typeLabel}
+                      {pos === 'left' ? <AlignLeft className="w-3.5 h-3.5" /> : <AlignRight className="w-3.5 h-3.5" />}
+                      Text {pos === 'left' ? 'Left' : 'Right'}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* ── Main value ── */}
+              {/* ── 2. Offer type ── */}
               <div className="space-y-2">
-                <Label htmlFor="mainValue">{cfg.label} *</Label>
-                <Input
-                  id="mainValue"
-                  placeholder={cfg.mainPlaceholder}
-                  value={formData.mainValue}
-                  onChange={(e) => handleInputChange('mainValue', e.target.value)}
-                />
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Offer Type
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.keys(OFFER_CONFIG) as OfferType[]).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setOfferType(type)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all ${
+                        offerType === type
+                          ? 'border-primary bg-primary/10 text-foreground'
+                          : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                      }`}
+                    >
+                      <span className="text-xl leading-none">{OFFER_CARDS[type].icon}</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold leading-tight">{OFFER_CONFIG[type].typeLabel}</p>
+                        <p className="text-xs opacity-60 truncate">{OFFER_CARDS[type].example}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* ── Sub value (% Bonus only) ── */}
-              {cfg.showSubValue && (
-                <div className="space-y-2">
-                  <Label htmlFor="subValue">Up to Amount</Label>
+              {/* ── 3. Offer values ── */}
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Offer Details
+                </p>
+
+                {/* Main value + sub value side by side when both shown */}
+                <div className={`grid gap-3 ${cfg.showSubValue ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mainValue" className="text-sm">
+                      {cfg.label} <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="mainValue"
+                      placeholder={cfg.mainPlaceholder}
+                      value={formData.mainValue}
+                      onChange={(e) => handleInputChange('mainValue', e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+                  {cfg.showSubValue && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="subValue" className="text-sm">Up to Amount</Label>
+                      <Input
+                        id="subValue"
+                        placeholder="e.g. $4,000"
+                        value={formData.subValue}
+                        onChange={(e) => handleInputChange('subValue', e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Cross-sell accent */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="crossSell" className="text-sm">
+                    Cross-sell Line{' '}
+                    <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                  </Label>
                   <Input
-                    id="subValue"
-                    placeholder="e.g. $4,000"
-                    value={formData.subValue}
-                    onChange={(e) => handleInputChange('subValue', e.target.value)}
+                    id="crossSell"
+                    placeholder="e.g. + 500% Bonus  or  100 Extra Spins"
+                    value={formData.crossSell}
+                    onChange={(e) => handleInputChange('crossSell', e.target.value)}
+                    className="h-10"
                   />
                 </div>
+              </div>
+
+              {/* ── 4. CTA ── */}
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Button & Code
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ctaText" className="text-sm">Button Text</Label>
+                    <Input
+                      id="ctaText"
+                      placeholder="Play Now"
+                      value={formData.ctaText}
+                      onChange={(e) => handleInputChange('ctaText', e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="bonusCode" className="text-sm">Bonus Code</Label>
+                    <Input
+                      id="bonusCode"
+                      placeholder="e.g. WELCOME100"
+                      value={formData.bonusCode}
+                      onChange={(e) => handleInputChange('bonusCode', e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ctaUrl" className="text-sm">Destination URL</Label>
+                  <Input
+                    id="ctaUrl"
+                    placeholder="https://your-casino.com/register"
+                    value={formData.ctaUrl === '#' ? '' : formData.ctaUrl}
+                    onChange={(e) => handleInputChange('ctaUrl', e.target.value || '#')}
+                    className="h-10"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <p className="text-destructive text-sm bg-destructive/10 rounded-lg px-3 py-2">
+                  {error}
+                </p>
               )}
 
-              {/* ── Cross-sell accent line ── */}
-              <div className="space-y-2">
-                <Label htmlFor="crossSell">
-                  Cross-sell Line{' '}
-                  <span className="text-muted-foreground font-normal">(optional accent)</span>
-                </Label>
-                <Input
-                  id="crossSell"
-                  placeholder="e.g. + 500% Bonus  /  100 Extra Spins"
-                  value={formData.crossSell}
-                  onChange={(e) => handleInputChange('crossSell', e.target.value)}
-                />
-              </div>
+            </div>
 
-              {/* ── Bottom row: code + button + url ── */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="ctaText">Button Text</Label>
-                  <Input
-                    id="ctaText"
-                    placeholder="Play Now"
-                    value={formData.ctaText}
-                    onChange={(e) => handleInputChange('ctaText', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bonusCode">Bonus Code</Label>
-                  <Input
-                    id="bonusCode"
-                    placeholder="e.g. WELCOME100"
-                    value={formData.bonusCode}
-                    onChange={(e) => handleInputChange('bonusCode', e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ctaUrl">CTA Link URL</Label>
-                <Input
-                  id="ctaUrl"
-                  placeholder="https://your-casino.com/register"
-                  value={formData.ctaUrl === '#' ? '' : formData.ctaUrl}
-                  onChange={(e) => handleInputChange('ctaUrl', e.target.value || '#')}
-                />
-              </div>
-
-              {/* ── Live preview ── */}
-              <div className="space-y-2 pt-1">
-                <Label className="text-muted-foreground text-xs uppercase tracking-widest">
+            {/* ════════════════════════════════════
+                RIGHT COLUMN — live preview + generate
+            ════════════════════════════════════ */}
+            <div className="w-64 shrink-0 bg-muted/20 border-l border-border flex flex-col">
+              <div className="px-4 pt-5 pb-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                   Live Preview
-                </Label>
-                {/* Container is ~100% of dialog inner width (~420px). Banner iframe is 900px
-                    wide scaled down so scale ≈ 420/900 ≈ 0.467. Height = 394 * 0.467 ≈ 184px */}
+                </p>
+                {/* iframe is 900px wide; scale it to fit 224px (256px - 32px padding)
+                    scale = 224/900 ≈ 0.249 · banner height = 394 × 0.249 ≈ 98px */}
                 <div
-                  className="relative w-full overflow-hidden rounded-lg border border-border"
-                  style={{ height: '184px' }}
+                  className="w-full overflow-hidden rounded-lg bg-black"
+                  style={{ height: '98px' }}
                 >
                   <iframe
                     srcDoc={previewHtml}
@@ -560,39 +606,45 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
                     style={{
                       width: '900px',
                       height: '394px',
-                      transform: 'scale(0.467)',
+                      transform: 'scale(0.249)',
                       transformOrigin: 'top left',
                       border: 'none',
                       pointerEvents: 'none',
                     }}
                   />
                 </div>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Updates as you type
+                </p>
               </div>
 
+              {/* Push button to bottom */}
+              <div className="mt-auto p-4 border-t border-border space-y-2">
+                <Button
+                  onClick={handleGenerate}
+                  className="w-full gradient-primary gap-2"
+                  disabled={isGenerating}
+                >
+                  {isGenerating ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Embedding…</>
+                  ) : (
+                    <><FileCode className="w-4 h-4" /> Generate HTML</>
+                  )}
+                </Button>
+                <Button variant="outline" onClick={handleClose} className="w-full">
+                  Cancel
+                </Button>
+              </div>
             </div>
 
-            {error && <p className="text-destructive text-sm">{error}</p>}
-
-            <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button onClick={handleGenerate} className="gradient-primary gap-2" disabled={isGenerating}>
-                {isGenerating ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Embedding image…</>
-                ) : (
-                  <><FileCode className="w-4 h-4" /> Generate HTML</>
-                )}
-              </Button>
-            </DialogFooter>
-          </>
+          </div>
         ) : (
           <>
-            <div className="py-4">
-              {/* Mini preview of the final output */}
+            <div className="px-6 py-5">
+              {/* Full-width preview of the final output */}
               <div
-                className="relative w-full overflow-hidden rounded-lg border border-border mb-5"
-                style={{ height: '184px' }}
+                className="w-full overflow-hidden rounded-lg bg-black mb-4"
+                style={{ height: '200px' }}
               >
                 <iframe
                   srcDoc={generatedHtml}
@@ -601,20 +653,20 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
                   style={{
                     width: '900px',
                     height: '394px',
-                    transform: 'scale(0.467)',
+                    transform: `scale(${(100 / 900) * 5.05})`,
                     transformOrigin: 'top left',
                     border: 'none',
                     pointerEvents: 'none',
                   }}
                 />
               </div>
-              <p className="text-center text-foreground font-medium mb-1">HTML Banner Ready</p>
-              <p className="text-center text-sm text-muted-foreground">
+              <p className="text-center text-foreground font-semibold mb-1">HTML Banner Ready</p>
+              <p className="text-center text-xs text-muted-foreground">
                 {cfg.typeLabel} · Text {textPosition} · {brand || 'Generic'} · image embedded
               </p>
             </div>
 
-            <DialogFooter className="flex gap-2 sm:gap-2">
+            <div className="flex gap-2 px-6 pb-5 border-t border-border pt-4">
               <Button variant="outline" onClick={() => setGeneratedHtml(null)} className="gap-2">
                 Edit
               </Button>
