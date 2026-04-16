@@ -118,6 +118,7 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
     ctaText: 'Play Now',
   });
   const [offerType, setOfferType] = useState<OfferType>('freespins');
+  const [bannerSize, setBannerSize] = useState<BannerSize>('wide');
   const [textPosition, setTextPosition] = useState<TextPosition>('right');
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
