@@ -688,47 +688,56 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
         ) : (
           <>
             <div className="px-6 py-5">
-              {/* Use previewHtml (raw imageUrl) so the image always renders —
-                  base64 conversion can fail due to CORS on some image hosts.
-                  The downloaded file uses the base64-embedded generatedHtml. */}
-              <div
-                className="w-full overflow-hidden rounded-lg bg-black mb-4"
-                style={{ height: '200px' }}
-              >
-                <iframe
-                  srcDoc={previewHtml}
-                  sandbox="allow-same-origin"
-                  title="Final banner preview"
-                  style={{
-                    width: '900px',
-                    height: '394px',
-                    transform: `scale(${(100 / 900) * 5.05})`,
-                    transformOrigin: 'top left',
-                    border: 'none',
-                    pointerEvents: 'none',
-                  }}
-                />
-              </div>
+              {/* Dynamic preview — ratio-aware */}
+              {(() => {
+                const sz = BANNER_SIZES[bannerSize];
+                const iframeW = 900;
+                const iframeH = Math.round(iframeW * sz.h / sz.w);
+                // Fill available dialog width (~500px inner)
+                const scale = 500 / iframeW;
+                const containerH = Math.min(Math.round(iframeH * scale), 400);
+                return (
+                  <div
+                    className="w-full overflow-hidden rounded-lg bg-black mb-4"
+                    style={{ height: `${containerH}px` }}
+                  >
+                    <iframe
+                      srcDoc={previewHtml}
+                      sandbox="allow-same-origin"
+                      title="Final banner preview"
+                      style={{
+                        width: `${iframeW}px`,
+                        height: `${iframeH}px`,
+                        transform: `scale(${scale})`,
+                        transformOrigin: 'top left',
+                        border: 'none',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  </div>
+                );
+              })()}
               <p className="text-center text-foreground font-semibold mb-1">HTML Banner Ready</p>
               <p className="text-center text-xs text-muted-foreground">
-                {cfg.typeLabel} · Text {textPosition} · {brand || 'Generic'} · image embedded
+                {cfg.typeLabel} · {BANNER_SIZES[bannerSize].label} · Text {textPosition} · {brand || 'Generic'}
               </p>
             </div>
 
-            <div className="flex items-center justify-between gap-2 px-6 pb-5 border-t border-border pt-4">
+            {/* Action buttons — Download is always visible and prominent */}
+            <div className="px-6 pb-5 border-t border-border pt-4 space-y-3">
+              <Button onClick={handleDownload} className="w-full gradient-primary gap-2 h-11">
+                <Download className="w-4 h-4" />
+                Download HTML
+              </Button>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setGeneratedHtml(null)} className="gap-2">
+                <Button variant="outline" onClick={() => setGeneratedHtml(null)} className="flex-1 gap-2">
                   Edit
                 </Button>
-                <Button variant="outline" onClick={handlePreview} className="gap-2">
+                <Button variant="outline" onClick={handlePreview} className="flex-1 gap-2">
                   <Eye className="w-4 h-4" />
                   Full Preview
                 </Button>
               </div>
-              <Button onClick={handleDownload} className="gradient-primary gap-2">
-                <Download className="w-4 h-4" />
-                Download
-              </Button>
             </div>
           </>
         )}
