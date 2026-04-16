@@ -211,14 +211,11 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
     .banner__gradient {
       position: absolute;
       inset: 0;
-      background: linear-gradient(
-        ${gradientDirection},
-        transparent 5%,
-        ${dark40} 35%,
-        ${dark70} 55%,
-        ${dark95} 75%,
-        ${dark95} 100%
-      );
+      background: ${isTall
+        ? `linear-gradient(to bottom, transparent 15%, ${dark40} 40%, ${dark70} 60%, ${dark95} 80%, ${dark95} 100%)`
+        : isLeaderboard
+          ? `linear-gradient(${gradientDirection}, transparent 0%, ${dark70} 30%, ${dark95} 50%, ${dark95} 100%)`
+          : `linear-gradient(${gradientDirection}, transparent 5%, ${dark40} 35%, ${dark70} 55%, ${dark95} 75%, ${dark95} 100%)`};
       z-index: 1;
     }
 
@@ -229,23 +226,25 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
       width: 100%;
       height: 100%;
       display: flex;
-      align-items: center;
-      justify-content: ${justifyContent};
+      ${isTall
+        ? 'align-items: flex-end; justify-content: center;'
+        : isLeaderboard
+          ? `align-items: center; justify-content: ${justifyContent};`
+          : `align-items: center; justify-content: ${justifyContent};`}
     }
 
-    /* Text panel — floats over the dark half of the gradient */
+    /* Text panel — adapts width/padding to banner shape */
     .banner__text {
       display: flex;
-      flex-direction: column;
-      justify-content: center;
-      width: 46%;
-      padding: 32px 40px;
-      gap: 8px;
+      flex-direction: ${isLeaderboard ? 'row' : 'column'};
+      ${isLeaderboard ? 'align-items: center;' : 'justify-content: center;'}
+      width: ${isTall ? '90%' : isLeaderboard ? '60%' : '46%'};
+      padding: ${isTall ? '24px 28px 32px' : isLeaderboard ? '8px 20px' : '32px 40px'};
+      gap: ${isLeaderboard ? '16px' : '8px'};
     }
 
     @media (max-width: 600px) {
-      .banner { aspect-ratio: auto; min-height: 320px; }
-      .banner__text { width: 100%; padding: 28px 24px; background: ${dark70}; }
+      .banner__text { width: 100%; padding: 20px; background: ${dark70}; }
     }
 
     /* Small brand label */
