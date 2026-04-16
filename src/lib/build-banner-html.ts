@@ -11,7 +11,6 @@ import { getBrandStyle, type BrandStyle } from './brand-standards';
 
 export type OfferType = 'freespins' | 'bonus' | 'nodeposit' | 'freebet';
 export type TextPosition = 'left' | 'right';
-export type BannerSize = 'wide' | 'standard' | 'leaderboard' | 'square' | 'rectangle' | 'story';
 
 export const OFFER_CONFIG: Record<OfferType, {
   label: string;
@@ -50,15 +49,6 @@ export const OFFER_CONFIG: Record<OfferType, {
   },
 };
 
-export const BANNER_SIZES: Record<BannerSize, { label: string; w: number; h: number; desc: string }> = {
-  wide:        { label: 'Wide Banner',  w: 16, h: 7,  desc: '728×315' },
-  standard:    { label: 'Standard',     w: 16, h: 9,  desc: '16:9' },
-  leaderboard: { label: 'Leaderboard',  w: 728, h: 90, desc: '728×90' },
-  square:      { label: 'Square',       w: 1,  h: 1,  desc: '1:1' },
-  rectangle:   { label: 'Rectangle',    w: 6,  h: 5,  desc: '300×250' },
-  story:       { label: 'Story',        w: 9,  h: 16, desc: '9:16' },
-};
-
 export interface BannerFormData {
   mainValue: string;
   subValue: string;
@@ -86,24 +76,27 @@ export interface BuildHtmlParams {
   brand?: string;
   formData: BannerFormData;
   offerType: OfferType;
-  bannerSize: BannerSize;
   textPosition: TextPosition;
+  /** Natural image dimensions — the banner matches the original image size */
+  imgWidth: number;
+  imgHeight: number;
 }
 
 export function buildBannerHtml(params: BuildHtmlParams): string {
-  const { imageSrc, brand, formData, offerType, bannerSize, textPosition } = params;
+  const { imageSrc, brand, formData, offerType, textPosition, imgWidth, imgHeight } = params;
 
   const style: BrandStyle = getBrandStyle(brand);
   const cfg = OFFER_CONFIG[offerType];
-  const size = BANNER_SIZES[bannerSize];
   const ctaLabel = formData.ctaText.trim() || 'Play Now';
 
   const dark95 = hexToRgba(style.panelBg, 0.95);
   const dark70 = hexToRgba(style.panelBg, 0.70);
   const dark40 = hexToRgba(style.panelBg, 0.40);
 
-  const isTall = size.h / size.w > 1;
-  const isLeaderboard = size.h / size.w < 0.2;
+  // Detect shape from the actual image dimensions
+  const ratio = imgHeight / imgWidth;
+  const isTall = ratio > 1;          // portrait / story
+  const isLeaderboard = ratio < 0.2; // ultra-wide strip
 
   const gradientDirection = textPosition === 'right' ? 'to right' : 'to left';
   const justifyContent = textPosition === 'right' ? 'flex-end' : 'flex-start';
@@ -118,7 +111,7 @@ export function buildBannerHtml(params: BuildHtmlParams): string {
 
   const googleFontsUrl = `https://fonts.googleapis.com/css2?family=${style.googleFont}&display=swap`;
 
-  // Gradient CSS varies by shape
+  // Gradient adapts to image shape
   let gradientCss: string;
   if (isTall) {
     gradientCss = `linear-gradient(to bottom, transparent 15%, ${dark40} 40%, ${dark70} 60%, ${dark95} 80%, ${dark95} 100%)`;
@@ -128,7 +121,7 @@ export function buildBannerHtml(params: BuildHtmlParams): string {
     gradientCss = `linear-gradient(${gradientDirection}, transparent 5%, ${dark40} 35%, ${dark70} 55%, ${dark95} 75%, ${dark95} 100%)`;
   }
 
-  // Content layout CSS varies by shape
+  // Content layout adapts to shape
   let contentAlignCss: string;
   if (isTall) {
     contentAlignCss = 'align-items: flex-end; justify-content: center;';
@@ -145,7 +138,7 @@ export function buildBannerHtml(params: BuildHtmlParams): string {
   const numberFontSize = isLeaderboard ? 'clamp(28px, 4vw, 40px)' : 'clamp(56px, 8.5vw, 96px)';
   const typeFontSize = isLeaderboard ? 'clamp(11px, 1.4vw, 16px)' : 'clamp(16px, 2.4vw, 26px)';
 
-  // Build conditional HTML fragments
+  // Conditional HTML fragments
   const brandLabel = brand ? `<p class="banner__brand">${brand}</p>` : '';
   const descriptorHtml = descriptor ? `<p class="banner__descriptor">${descriptor}</p>` : '';
   const crossSellHtml = formData.crossSell ? `<p class="banner__crosssell">${formData.crossSell}</p>` : '';
@@ -176,11 +169,11 @@ export function buildBannerHtml(params: BuildHtmlParams): string {
     '    .banner {',
     '      position: relative;',
     '      width: 100%;',
-    `      max-width: ${isLeaderboard ? '728px' : '900px'};`,
+    `      max-width: ${imgWidth}px;`,
     '      overflow: hidden;',
-    `      border-radius: ${isLeaderboard ? '6px' : '10px'};`,
+    '      border-radius: 10px;',
     '      box-shadow: 0 8px 48px rgba(0,0,0,0.7);',
-    `      aspect-ratio: ${size.w} / ${size.h};`,
+    `      aspect-ratio: ${imgWidth} / ${imgHeight};`,
     '    }',
     '',
     '    .banner__bg {',
