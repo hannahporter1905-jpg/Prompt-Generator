@@ -238,8 +238,8 @@ Example response:
 
 ---
 
-## Brands in the System
-SpinJo, Roosterbet, FortunePlay, LuckyVibe, SpinsUp
+## Brands in the System (9 total)
+Roosterbet, FortunePlay, SpinJo, LuckyVibe, SpinsUp, PlayMojo, Lucky7even, NovaDreams, Rollero
 
 ---
 
