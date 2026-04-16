@@ -269,7 +269,7 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
 
     /* Offer type label e.g. "FREE SPINS" / "BONUS" */
     .banner__type {
-      font-size: clamp(16px, 2.4vw, 26px);
+      font-size: ${isLeaderboard ? 'clamp(11px, 1.4vw, 16px)' : 'clamp(16px, 2.4vw, 26px)'};
       font-weight: 800;
       color: ${style.headlineColor};
       text-transform: uppercase;
