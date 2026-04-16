@@ -14,26 +14,47 @@
  * TO ADD A NEW BRAND:
  * Just add a new key below with its approved colors and forbidden colors.
  * Both the API and frontend will pick it up automatically.
+ *
+ * BRANDS (9 total):
+ *   Roosterbet, FortunePlay, SpinJo, LuckyVibe, SpinsUp,
+ *   PlayMojo, Lucky7even, NovaDreams, Rollero
  */
 export const BRAND_PALETTES: Record<string, string> = {
+  // Red/dark aggressive — rooster mascot
+  Roosterbet:
+    'Red, crimson, fiery orange, black, bold white. High-energy sports palette. NEVER use pastel, soft pink, blue, or muted tones.',
+
+  // Gold/black premium — lion mascot
   FortunePlay:
     'Yellow, orange, gold, warm amber, warm casino lighting. NEVER use blue, purple, cyan, neon, or cold tones.',
+
+  // Deep navy/cyan space — astronaut theme
   SpinJo:
-    'Purple, violet, magenta, neon-blue, electric cyan, deep space black. Sci-fi/futuristic palette. NEVER use gold, warm amber, orange, or earthy warm tones.',
-  Roosterbet:
-    'Red, crimson, fiery orange, black, bold white. High-energy sports palette. NEVER use pastel, soft pink, or muted tones.',
+    'Deep navy blue, electric cyan, white, dark space black. Clean futuristic space palette. NEVER use gold, warm amber, orange, purple, or earthy warm tones.',
+
+  // Warm amber/orange sunset — golden mascot
   LuckyVibe:
     'Golden hour warm tones, sunset orange, tropical coral, soft amber, warm backlight. NEVER use cold blue, purple, or neon tones.',
+
+  // Dark purple/neon — fantasy magical theme
   SpinsUp:
     'Neon purple, electric magenta, showman gold accents, deep black, circus-bright. Magical/mystical palette. NEVER use muted earthy tones or pastels.',
+
+  // Dark navy/teal — bunny mascot, clean modern
   PlayMojo:
-    'Dark noir black, bold white, sharp red accent. Sleek, cinematic. NEVER use warm gold, pastel, or cheerful bright colors.',
+    'Dark navy black, teal, cyan, cool blue accents, clean white. Sleek modern palette. NEVER use warm gold, red, orange, or cheerful bright colors.',
+
+  // Deep purple/gold cosmic — Lucky7 neon theme
   Lucky7even:
-    'Deep purple, electric violet, metallic gold accents, black. Rich premium palette. NEVER use flat grey, earthy tones, or muted colors.',
+    'Deep purple, electric violet, metallic gold accents, black. Rich premium casino palette. NEVER use flat grey, earthy tones, or muted colors.',
+
+  // Cosmic blue/white — astronaut/space explorer
   NovaDreams:
-    'Cosmic blue, electric cyan, white, deep navy black. Space/futuristic palette. NEVER use warm orange, red, gold, or earthy tones.',
+    'Cosmic blue, electric cyan, white, deep navy black. Space/futuristic exploration palette. NEVER use warm orange, red, gold, or earthy tones.',
+
+  // Dark charcoal/gold — Roman gladiator warrior
   Rollero:
-    'Crimson red, dark charcoal grey, black, sharp white highlight. Warrior/combat palette. NEVER use pastel, neon, or soft warm tones.',
+    'Dark charcoal, aged gold, warm wheat, black, sharp white highlight. Warrior/ancient Rome palette. NEVER use pastel, neon, cold blue, or soft tones.',
 };
 
 /**
