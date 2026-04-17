@@ -160,6 +160,10 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // When no brand prop is provided, let the user pick one
+  const [selectedBrand, setSelectedBrand] = useState<string>(brand || '');
+  useEffect(() => { setSelectedBrand(brand || ''); }, [brand]);
+  const effectiveBrand = selectedBrand || undefined;
 
   // Detect original image dimensions
   const [imgDims, setImgDims] = useState<{ w: number; h: number }>({ w: 16, h: 9 });
