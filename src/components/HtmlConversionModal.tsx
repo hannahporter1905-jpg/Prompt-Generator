@@ -258,7 +258,7 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
           <FileCode className="w-4 h-4 text-primary shrink-0" />
           <div className="min-w-0">
             <h2 className="text-sm font-semibold leading-tight">Convert to HTML Banner</h2>
-            <p className="text-[11px] text-muted-foreground truncate">{brand || 'Generic'} · {dimLabel}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{effectiveBrand || 'Generic'} · {dimLabel}</p>
           </div>
         </div>
 
