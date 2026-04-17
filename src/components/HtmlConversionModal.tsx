@@ -190,7 +190,7 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
     try {
       const imageSrc = await toBase64DataUri(imageUrl);
       setGeneratedHtml(buildBannerHtml({
-        imageSrc, brand, formData, offerType, textPosition,
+        imageSrc, brand: effectiveBrand, formData, offerType, textPosition,
         imgWidth: imgDims.w, imgHeight: imgDims.h,
       }));
     } catch {
@@ -206,7 +206,7 @@ export function HtmlConversionModal({ isOpen, onClose, imageUrl, brand }: HtmlCo
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${brand ? brand.toLowerCase() : 'banner'}-${offerType}-banner.html`;
+    a.download = `${effectiveBrand ? effectiveBrand.toLowerCase() : 'banner'}-${offerType}-banner.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
